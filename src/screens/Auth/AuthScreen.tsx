@@ -10,6 +10,14 @@ import {
   StatusBar,
   Dimensions,
 } from 'react-native';
+
+// reCAPTCHA container — web only, invisible on native
+const RecaptchaContainer = Platform.OS === 'web'
+  ? ({ id, recaptchaKey }: { id: string; recaptchaKey: number }) => (
+      // @ts-ignore — div is valid on web only
+      <div key={recaptchaKey} id={id} />
+    )
+  : () => null;
 import Svg, {
   Ellipse,
   Circle,
@@ -136,7 +144,7 @@ const AuthScreen: React.FC = () => {
       >
         <StatusBar barStyle="light-content" />
         <BgDecor />
-        <div key={recaptchaKey} id={recaptchaId} />
+        <RecaptchaContainer id={recaptchaId} recaptchaKey={recaptchaKey} />
 
         <ScrollView
           contentContainerStyle={{
@@ -291,7 +299,7 @@ const AuthScreen: React.FC = () => {
     >
       <StatusBar barStyle="light-content" />
       <BgDecor />
-      <div key={recaptchaKey} id={recaptchaId} />
+      <RecaptchaContainer id={recaptchaId} recaptchaKey={recaptchaKey} />
 
       <ScrollView
         contentContainerStyle={{
