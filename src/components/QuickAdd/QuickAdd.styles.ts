@@ -1,0 +1,45 @@
+import { StyleSheet } from 'react-native';
+
+export const styles = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 28,
+    paddingBottom: 40,
+    gap: 16,
+  },
+  handle: {
+    width: 44,
+    height: 5,
+    backgroundColor: '#E8ECF4',
+    borderRadius: 99,
+    alignSelf: 'center',
+    marginBottom: 4,
+  },
+  title: { fontSize: 20, fontWeight: '800', color: '#1A1A2E' },
+  sectionLabel: { fontSize: 13, fontWeight: '700', color: '#1A1A2E' },
+  typeRow: { flexDirection: 'row', marginBottom: 4 },
+  typeChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 22,
+    backgroundColor: '#F4F6FC',
+    marginRight: 8,
+    borderWidth: 1.5,
+    borderColor: '#E8ECF4',
+  },
+  typeChipActive: { backgroundColor: '#6C63FF', borderColor: '#6C63FF' },
+  typeChipText: { fontSize: 13, color: '#8898AA', fontWeight: '500' },
+  typeChipTextActive: { color: '#fff', fontWeight: '700' },
+  error: {
+    color: '#FF6584',
+    fontSize: 13,
+    textAlign: 'center',
+    backgroundColor: '#FFF0F4',
+    padding: 10,
+    borderRadius: 10,
+  },
+  actions: { gap: 10 },
+});
