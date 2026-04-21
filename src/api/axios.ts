@@ -1,10 +1,9 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
 import { navigationRef } from '../navigation/navigationRef';
 import { auth } from '../utils/firebase';
 
-const BASE_URL = (Constants.expoConfig?.extra?.apiBaseUrl as string | undefined) ?? 'http://localhost:8080';
+const BASE_URL = 'http://localhost:8080';
 
 const api = axios.create({
   baseURL: BASE_URL,

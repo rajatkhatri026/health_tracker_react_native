@@ -1,16 +1,15 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import Constants from 'expo-constants';
 
-const extra = Constants.expoConfig?.extra ?? {};
-
+// Firebase client config is safe to hardcode — it is not a secret.
+// Security is enforced via Firebase Security Rules, not by hiding these values.
 const firebaseConfig = {
-  apiKey: extra.firebaseApiKey as string,
-  authDomain: extra.firebaseAuthDomain as string,
-  projectId: extra.firebaseProjectId as string,
-  storageBucket: extra.firebaseStorageBucket as string,
-  messagingSenderId: extra.firebaseMessagingSenderId as string,
-  appId: extra.firebaseAppId as string,
+  apiKey: 'AIzaSyAyhdTv8bJ5shY8WsA5dyHhmcyt_eRMJwk',
+  authDomain: 'health-tracker-20c17.firebaseapp.com',
+  projectId: 'health-tracker-20c17',
+  storageBucket: 'health-tracker-20c17.firebasestorage.app',
+  messagingSenderId: '1010701607223',
+  appId: '1:1010701607223:web:7512fe4f1f03d756d93ab2',
 };
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
