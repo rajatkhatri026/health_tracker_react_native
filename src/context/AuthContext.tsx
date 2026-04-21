@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from 'firebase/auth';
+import { Platform } from 'react-native';
+import { signInWithPhoneNumber, type ConfirmationResult } from 'firebase/auth';
 import { auth } from '../utils/firebase';
 import type { User } from '../types';
 import { phoneAuth, getMe } from '../api/auth';
@@ -47,31 +48,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loadUser();
   }, [loadUser]);
 
-  const recaptchaRef = React.useRef<InstanceType<typeof RecaptchaVerifier> | null>(null);
+  const recaptchaRef = React.useRef<unknown>(null);
 
   const sendOtp = async (phone: string, recaptchaContainerId: string) => {
-    if (!recaptchaRef.current) {
-      recaptchaRef.current = new RecaptchaVerifier(auth, recaptchaContainerId, {
-        size: 'invisible',
-        callback: () => {}, // auto-resolve — no user interaction needed
-        'expired-callback': () => {
-          // silently reset on expiry
-          try {
-            recaptchaRef.current?.clear();
-          } catch {}
-          recaptchaRef.current = null;
-        },
-      });
-      await recaptchaRef.current.render(); // pre-render so it's ready instantly
+    let verifier: unknown = recaptchaRef.current;
+
+    if (Platform.OS === 'web') {
+      // Web — use reCAPTCHA verifier (loaded lazily to avoid crashing on native)
+      if (!verifier) {
+        const { RecaptchaVerifier } = await import('firebase/auth');
+        const rv = new RecaptchaVerifier(auth, recaptchaContainerId, {
+          size: 'invisible',
+          callback: () => {},
+          'expired-callback': () => {
+            try { (recaptchaRef.current as { clear: () => void })?.clear(); } catch {}
+            recaptchaRef.current = null;
+          },
+        });
+        await rv.render();
+        recaptchaRef.current = rv;
+        verifier = rv;
+      }
     }
+    // On native: appVerificationDisabledForTesting=true in firebase.ts skips reCAPTCHA entirely
+
     try {
-      const result = await signInWithPhoneNumber(auth, phone, recaptchaRef.current);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await signInWithPhoneNumber(auth, phone, verifier as any);
       setConfirmationResult(result);
     } catch (e) {
-      try {
-        recaptchaRef.current?.clear();
-      } catch {}
-      recaptchaRef.current = null;
+      if (Platform.OS === 'web') {
+        try { (recaptchaRef.current as { clear: () => void })?.clear(); } catch {}
+        recaptchaRef.current = null;
+      }
       throw e;
     }
   };
