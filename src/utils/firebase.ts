@@ -1,8 +1,10 @@
+import { Platform } from 'react-native';
+
+// ─── Web ─────────────────────────────────────────────────────────────────────
+// Use Firebase web SDK on web (full browser support for reCAPTCHA)
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 
-// Firebase client config is safe to hardcode — it is not a secret.
-// Security is enforced via Firebase Security Rules, not by hiding these values.
 const firebaseConfig = {
   apiKey: 'AIzaSyAyhdTv8bJ5shY8WsA5dyHhmcyt_eRMJwk',
   authDomain: 'health-tracker-20c17.firebaseapp.com',
@@ -12,9 +14,12 @@ const firebaseConfig = {
   appId: '1:1010701607223:web:7512fe4f1f03d756d93ab2',
 };
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-export const auth = getAuth(app);
+const webApp = Platform.OS === 'web'
+  ? (getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0])
+  : null;
 
-if (__DEV__) {
+export const auth = Platform.OS === 'web' ? getAuth(webApp!) : null;
+
+if (Platform.OS === 'web' && __DEV__ && auth) {
   auth.settings.appVerificationDisabledForTesting = true;
 }

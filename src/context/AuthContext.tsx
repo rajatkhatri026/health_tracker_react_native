@@ -1,17 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { signInWithPhoneNumber, type ConfirmationResult, type ApplicationVerifier } from 'firebase/auth';
+import type { ConfirmationResult, ApplicationVerifier } from 'firebase/auth';
 import { auth } from '../utils/firebase';
-
-// Minimal verifier for native — when appVerificationDisabledForTesting=true
-// Firebase bypasses real reCAPTCHA but still calls verify(). Return empty
-// string so Firebase uses the test token from its internal test mode.
-const nativeVerifier = {
-  type: 'recaptcha',
-  verify: () => Promise.resolve(''),
-  _reset: () => {},
-} as unknown as ApplicationVerifier;
 import type { User } from '../types';
 import { phoneAuth, getMe } from '../api/auth';
 
@@ -33,14 +24,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [onboardingDone, setOnboardingDone] = useState(false);
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+
+  // Web: uses Firebase web SDK ConfirmationResult
+  const [webConfirmation, setWebConfirmation] = useState<ConfirmationResult | null>(null);
+  // Native: uses @react-native-firebase ConfirmationResult
+  const [nativeConfirmation, setNativeConfirmation] = useState<{ confirm: (code: string) => Promise<{ user: { getIdToken: () => Promise<string> } }> } | null>(null);
 
   const loadUser = useCallback(async () => {
     const token = await AsyncStorage.getItem('access_token');
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
+    if (!token) { setIsLoading(false); return; }
     try {
       const me = await getMe();
       setUser(me);
@@ -53,17 +45,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  useEffect(() => {
-    loadUser();
-  }, [loadUser]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { loadUser(); }, [loadUser]);
 
   const recaptchaRef = React.useRef<unknown>(null);
 
   const sendOtp = async (phone: string, recaptchaContainerId: string) => {
-    let verifier: unknown = recaptchaRef.current;
-
     if (Platform.OS === 'web') {
-      // Web — use reCAPTCHA verifier (loaded lazily to avoid crashing on native)
+      // ── Web: Firebase web SDK + reCAPTCHA ──────────────────────────────────
+      if (!auth) throw new Error('Firebase auth not initialized');
+      let verifier = recaptchaRef.current as ApplicationVerifier | null;
       if (!verifier) {
         const { RecaptchaVerifier } = await import('firebase/auth');
         const rv = new RecaptchaVerifier(auth, recaptchaContainerId, {
@@ -78,28 +69,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         recaptchaRef.current = rv;
         verifier = rv;
       }
-    }
-    // On native: use dummy verifier — appVerificationDisabledForTesting bypasses real reCAPTCHA
-    if (Platform.OS !== 'web') {
-      verifier = nativeVerifier;
-    }
-
-    try {
-      const result = await signInWithPhoneNumber(auth, phone, verifier as ApplicationVerifier);
-      setConfirmationResult(result);
-    } catch (e) {
-      if (Platform.OS === 'web') {
-        try { (recaptchaRef.current as { clear: () => void })?.clear(); } catch {}
-        recaptchaRef.current = null;
-      }
-      throw e;
+      const { signInWithPhoneNumber } = await import('firebase/auth');
+      const result = await signInWithPhoneNumber(auth, phone, verifier);
+      setWebConfirmation(result);
+    } else {
+      // ── Native: @react-native-firebase — real SMS, no reCAPTCHA needed ─────
+      const rnFirebaseAuth = require('@react-native-firebase/auth').default;
+      const confirmation = await rnFirebaseAuth().signInWithPhoneNumber(phone);
+      setNativeConfirmation(confirmation);
     }
   };
 
   const verifyOtp = async (otp: string): Promise<{ isNewUser: boolean }> => {
-    if (!confirmationResult) throw new Error('No OTP sent');
-    const credential = await confirmationResult.confirm(otp);
-    const idToken = await credential.user.getIdToken();
+    let idToken: string;
+
+    if (Platform.OS === 'web') {
+      if (!webConfirmation) throw new Error('No OTP sent');
+      const credential = await webConfirmation.confirm(otp);
+      idToken = await credential.user.getIdToken();
+    } else {
+      if (!nativeConfirmation) throw new Error('No OTP sent');
+      const credential = await nativeConfirmation.confirm(otp);
+      idToken = await credential.user.getIdToken();
+    }
+
     const tokens = await phoneAuth(idToken);
     await AsyncStorage.setItem('access_token', tokens.access_token);
     await AsyncStorage.setItem('refresh_token', tokens.refresh_token);
