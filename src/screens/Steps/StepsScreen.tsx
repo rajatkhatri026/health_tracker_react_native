@@ -5,8 +5,8 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  Dimensions,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient as SvgGrad, Stop } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -184,9 +184,12 @@ const StepsScreen: React.FC = () => {
                 ⚠️ Permission required
               </Text>
               <Text style={{ color: COLORS.textMuted, fontSize: 12, lineHeight: 18 }}>
-                Allow Nexara to access your fitness data in your device settings to track steps.
+                Allow Nexara to access Motion & Fitness in your device settings to track steps.
               </Text>
-              <TouchableOpacity onPress={refresh} style={{ marginTop: 10 }}>
+              <TouchableOpacity
+                onPress={() => Linking.openURL('app-settings:')}
+                style={{ marginTop: 10 }}
+              >
                 <LinearGradient
                   colors={['#7C3AED', '#06B6D4']}
                   start={{ x: 0, y: 0 }}

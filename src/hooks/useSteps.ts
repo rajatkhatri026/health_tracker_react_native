@@ -6,6 +6,7 @@ import {
   getTodaySteps,
   getWeeklySteps,
   initStepTracker,
+  resetStepTracker,
   isStepTrackingSupported,
 } from '../utils/stepTracker';
 
@@ -43,7 +44,8 @@ export const useSteps = (): UseStepsResult => {
   const syncFromDevice = useCallback(async () => {
     if (!supported || !userId) return;
 
-    // Init + request permissions
+    // Reset so initStepTracker re-requests permissions if previously denied
+    resetStepTracker();
     const ok = await initStepTracker();
     setPermissionGranted(ok);
     if (!ok) return;

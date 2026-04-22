@@ -6,7 +6,7 @@ module.exports = {
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
-    newArchEnabled: true,
+    newArchEnabled: false,
     splash: {
       image: './assets/splash-icon.png',
       resizeMode: 'contain',
@@ -14,6 +14,8 @@ module.exports = {
     },
     ios: {
       supportsTablet: true,
+      bundleIdentifier: 'com.rajatkhatri.nexara',
+      googleServicesFile: './GoogleService-Info.plist',
     },
     android: {
       adaptiveIcon: {
@@ -35,17 +37,33 @@ module.exports = {
     plugins: [
       '@react-native-firebase/app',
       '@react-native-firebase/auth',
-      '@react-native-community/datetimepicker',
       [
-        'expo-notifications',
+        'expo-build-properties',
         {
-          icon: './assets/icon.png',
-          color: '#7C3AED',
-          sounds: [],
-          androidMode: 'default',
-          androidCollapsedTitle: 'Nexara',
+          ios: {
+            useFrameworks: 'static',
+            // Build React Native from source (required when use_frameworks!
+            // + use_modular_headers! are combined with @react-native-firebase,
+            // because the prebuilt React-Core xcframework cannot expose
+            // modular headers).
+            buildReactNativeFromSource: true,
+          },
         },
       ],
+      '@react-native-community/datetimepicker',
+      // expo-notifications plugin temporarily disabled — personal Apple team
+      // cannot sign the push notifications entitlement. Re-enable when you
+      // have a paid Apple Developer account.
+      // [
+      //   'expo-notifications',
+      //   {
+      //     icon: './assets/icon.png',
+      //     color: '#7C3AED',
+      //     sounds: [],
+      //     androidMode: 'default',
+      //     androidCollapsedTitle: 'Nexara',
+      //   },
+      // ],
       [
         'react-native-health-connect',
         {

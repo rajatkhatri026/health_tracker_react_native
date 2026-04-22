@@ -3,7 +3,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { navigationRef } from '../navigation/navigationRef';
 import { auth } from '../utils/firebase';
 
-const BASE_URL = 'http://localhost:8080';
+// Backend base URL — REQUIRED to be set in .env as EXPO_PUBLIC_API_BASE_URL.
+// On physical iOS/Android devices, 'localhost' points to the device itself,
+// so you must use your Mac's LAN IP (e.g. http://192.168.x.x:8080).
+// Web can use localhost because the browser runs on the same machine as the
+// backend, but using the LAN IP works for both.
+const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+if (!BASE_URL) {
+  throw new Error(
+    'EXPO_PUBLIC_API_BASE_URL is not set in .env. ' +
+      'Set it to your backend URL, e.g. http://192.168.1.10:8080'
+  );
+}
 
 const api = axios.create({
   baseURL: BASE_URL,

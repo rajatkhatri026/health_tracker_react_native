@@ -1,6 +1,7 @@
 /**
  * Step Tracker — platform abstraction
  *
+ * Expo Go: uses expo-sensors Pedometer (today only; weekly history limited)
  * iOS  : reads HealthKit via react-native-health (requires dev build)
  * Android: reads Health Connect via react-native-health-connect (requires dev build)
  * Web  : no native pedometer — returns null (web only shows synced data)
@@ -34,17 +35,43 @@ const endOfDay = (d: Date = new Date()): Date => {
   return s;
 };
 
-// ─── iOS ─────────────────────────────────────────────────────────────────────
+// ─── Expo Go (Pedometer) ─────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const rnHealth = () => require('react-native-health');
+const expoPedometer = () => require('expo-sensors').Pedometer;
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const rnHealthConnect = () => require('react-native-health-connect');
 
-type HealthKitError = Error | null;
-interface HealthKitStepResult {
-  value?: number;
-}
+// ─── Expo Go implementation (expo-sensors Pedometer) ─────────────────────────
+
+const initPedometer = async (): Promise<boolean> => {
+  try {
+    const Pedometer = expoPedometer();
+    const available = await Pedometer.isAvailableAsync();
+    if (!available) return false;
+    // On iOS, Pedometer requires Motion permission; on Android it uses
+    // ACTIVITY_RECOGNITION. expo-sensors prompts when first queried.
+    if (Platform.OS === 'ios' && Pedometer.requestPermissionsAsync) {
+      const { status } = await Pedometer.requestPermissionsAsync();
+      return status === 'granted';
+    }
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const getStepsPedometer = async (start: Date, end: Date): Promise<number> => {
+  try {
+    const Pedometer = expoPedometer();
+    const result = await Pedometer.getStepCountAsync(start, end);
+    return result?.steps ?? 0;
+  } catch {
+    return 0;
+  }
+};
+
 interface HealthConnectPermission {
   granted: boolean;
 }
@@ -54,35 +81,6 @@ interface HealthConnectRecord {
 interface HealthConnectRecords {
   records: HealthConnectRecord[];
 }
-
-const initHealthKit = async (): Promise<boolean> => {
-  try {
-    const { default: AppleHealthKit, Permissions } = rnHealth();
-    return new Promise((resolve) => {
-      AppleHealthKit.initHealthKit(
-        { permissions: { read: [Permissions.Steps], write: [] } },
-        (err: HealthKitError) => resolve(!err)
-      );
-    });
-  } catch {
-    return false;
-  }
-};
-
-const getStepsIOS = async (start: Date, end: Date): Promise<number> => {
-  try {
-    const { default: AppleHealthKit } = rnHealth();
-    return new Promise((resolve) => {
-      AppleHealthKit.getStepCount(
-        { startDate: start.toISOString(), endDate: end.toISOString() },
-        (err: HealthKitError, result: HealthKitStepResult) =>
-          resolve(err ? 0 : (result?.value ?? 0))
-      );
-    });
-  } catch {
-    return 0;
-  }
-};
 
 // ─── Android ─────────────────────────────────────────────────────────────────
 
@@ -120,11 +118,25 @@ const getStepsAndroid = async (start: Date, end: Date): Promise<number> => {
 
 let _initialized = false;
 
+export const resetStepTracker = (): void => {
+  _initialized = false;
+};
+
 export const initStepTracker = async (): Promise<boolean> => {
   if (_initialized) return true;
-  if (Platform.OS === 'ios') _initialized = await initHealthKit();
-  else if (Platform.OS === 'android') _initialized = await initHealthConnect();
-  else _initialized = false; // web — not supported
+  if (Platform.OS === 'web') {
+    _initialized = false;
+    return false;
+  }
+  if (Platform.OS === 'ios') {
+    // Use Pedometer (expo-sensors / CoreMotion) on iOS — works without
+    // a paid Apple Developer account. HealthKit requires a paid account.
+    _initialized = await initPedometer();
+  } else if (Platform.OS === 'android') {
+    _initialized = await initHealthConnect();
+  } else {
+    _initialized = false;
+  }
   return _initialized;
 };
 
@@ -133,8 +145,10 @@ export const getTodaySteps = async (): Promise<number | null> => {
   const ok = await initStepTracker();
   if (!ok) return null;
   const now = new Date();
-  if (Platform.OS === 'ios') return getStepsIOS(startOfDay(now), endOfDay(now));
-  if (Platform.OS === 'android') return getStepsAndroid(startOfDay(now), endOfDay(now));
+  const start = startOfDay(now);
+  const end = endOfDay(now);
+  if (Platform.OS === 'ios') return getStepsPedometer(start, end);
+  if (Platform.OS === 'android') return getStepsAndroid(start, end);
   return null;
 };
 
@@ -150,7 +164,7 @@ export const getWeeklySteps = async (): Promise<DailySteps[]> => {
     const start = startOfDay(d);
     const end = endOfDay(d);
     let steps = 0;
-    if (Platform.OS === 'ios') steps = await getStepsIOS(start, end);
+    if (Platform.OS === 'ios') steps = await getStepsPedometer(start, end);
     else if (Platform.OS === 'android') steps = await getStepsAndroid(start, end);
     days.push({ date: localDateStr(d), steps });
   }

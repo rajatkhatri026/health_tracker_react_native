@@ -12,12 +12,13 @@ import {
 } from 'react-native';
 
 // reCAPTCHA container — web only, invisible on native
-const RecaptchaContainer = Platform.OS === 'web'
-  ? ({ id, recaptchaKey }: { id: string; recaptchaKey: number }) => (
-      // @ts-ignore — div is valid on web only
-      <div key={recaptchaKey} id={id} />
-    )
-  : () => null;
+const RecaptchaContainer =
+  Platform.OS === 'web'
+    ? ({ id, recaptchaKey }: { id: string; recaptchaKey: number }) => (
+        // @ts-expect-error — div is valid on web only
+        <div key={recaptchaKey} id={id} />
+      )
+    : () => null;
 import Svg, {
   Ellipse,
   Circle,
@@ -128,8 +129,26 @@ const AuthScreen: React.FC = () => {
     setError('');
     try {
       await verifyOtp(otp);
-    } catch {
-      setError('Invalid code. Please try again.');
+    } catch (e: any) {
+      // Distinguish Firebase errors (wrong OTP, expired code, etc.) from
+      // network / backend errors. Firebase errors surface through e.code;
+      // axios errors surface through e.response / e.message.
+      const firebaseCode: string | undefined = e?.code;
+      let msg: string;
+      if (firebaseCode === 'auth/invalid-verification-code') {
+        msg = 'Invalid code. Please try again.';
+      } else if (firebaseCode === 'auth/code-expired') {
+        msg = 'Code expired. Request a new one.';
+      } else if (firebaseCode === 'auth/too-many-requests') {
+        msg = 'Too many attempts. Try again later.';
+      } else if (e?.response?.data?.message) {
+        msg = `Server: ${e.response.data.message}`;
+      } else if (e?.message?.includes('Network')) {
+        msg = 'Cannot reach server. Check your connection.';
+      } else {
+        msg = e?.message || 'Something went wrong. Please try again.';
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }
