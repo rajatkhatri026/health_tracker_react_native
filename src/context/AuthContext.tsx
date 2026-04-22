@@ -4,12 +4,12 @@ import { Platform } from 'react-native';
 import { signInWithPhoneNumber, type ConfirmationResult, type ApplicationVerifier } from 'firebase/auth';
 import { auth } from '../utils/firebase';
 
-// Minimal verifier for native — appVerificationDisabledForTesting bypasses
-// real reCAPTCHA but the SDK still requires an ApplicationVerifier object
-// with type, verify() and _reset() methods.
+// Minimal verifier for native — when appVerificationDisabledForTesting=true
+// Firebase bypasses real reCAPTCHA but still calls verify(). Return empty
+// string so Firebase uses the test token from its internal test mode.
 const nativeVerifier = {
   type: 'recaptcha',
-  verify: () => Promise.resolve('native-token'),
+  verify: () => Promise.resolve(''),
   _reset: () => {},
 } as unknown as ApplicationVerifier;
 import type { User } from '../types';
