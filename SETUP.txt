@@ -1,0 +1,124 @@
+====================================================
+  NEXARA FRONTEND — SETUP & RUN GUIDE
+  Stack: React Native + Expo + Firebase Auth
+====================================================
+
+PREREQUISITES
+-------------
+- Node.js v18 or higher
+- npm v9 or higher
+- Expo CLI: npm install -g expo-cli
+- For iOS: macOS with Xcode installed (iPhone simulator or physical device)
+- For Android: Android Studio with an emulator, or a physical Android device
+- A Firebase project with Phone Authentication enabled
+- Backend server running (see health_tracker_node_js/SETUP.txt)
+
+
+STEP 1 — CLONE THE REPO
+------------------------
+  git clone https://github.com/rajatkhatri026/health_tracker_react_native.git
+  cd health_tracker_react_native
+
+
+STEP 2 — INSTALL DEPENDENCIES
+------------------------------
+  npm install
+
+
+STEP 3 — SET UP ENVIRONMENT VARIABLES
+--------------------------------------
+  Copy the example file:
+    cp .env.example .env
+
+  Fill in the values in .env:
+
+    EXPO_PUBLIC_FIREBASE_API_KEY
+    EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN
+    EXPO_PUBLIC_FIREBASE_PROJECT_ID
+    EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET
+    EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    EXPO_PUBLIC_FIREBASE_APP_ID
+      All from: Firebase Console > Project Settings > Your apps > Web app config
+
+    EXPO_PUBLIC_API_BASE_URL
+      URL of the running backend server.
+      - Simulator: http://localhost:8080
+      - Physical device: http://<your-mac-lan-ip>:8080
+        Find your Mac's IP: ipconfig getifaddr en0
+      Make sure your phone and Mac are on the same Wi-Fi network.
+
+
+STEP 4 — FIREBASE SETUP
+------------------------
+  1. Go to Firebase Console (https://console.firebase.google.com)
+  2. Open your project > Authentication > Sign-in method
+  3. Enable "Phone" as a sign-in provider
+  4. For testing without APNs, add test phone numbers:
+       Authentication > Sign-in method > Phone > Phone numbers for testing
+       Example: +91 9876543210 with code 123456
+
+  iOS — Add GoogleService-Info.plist:
+    Download from: Firebase Console > Project Settings > Your apps > iOS app
+    Place it at: ios/GoogleService-Info.plist
+
+  Android — Add google-services.json:
+    Download from: Firebase Console > Project Settings > Your apps > Android app
+    Place it at: android/app/google-services.json
+
+
+STEP 5 — BUILD AND RUN (Custom Dev Client)
+------------------------------------------
+  NOTE: This app uses @react-native-firebase which requires a custom dev
+  client. It will NOT work in the standard Expo Go app.
+
+  iOS (first time or after native changes):
+    npx expo run:ios
+    or for a physical device:
+    npx expo run:ios --device
+
+  Android (first time or after native changes):
+    npx expo run:android
+    or for a physical device:
+    npx expo run:android --device
+
+  After the first build, for JS-only changes you can use:
+    npx expo start --dev-client
+  This is faster — no full rebuild needed.
+
+
+STEP 6 — STEP TRACKING PERMISSIONS (iOS)
+-----------------------------------------
+  Step tracking uses CoreMotion (Pedometer) on iOS — no Apple Developer
+  account required.
+
+  When prompted, allow Motion & Fitness access.
+  Or manually enable it:
+    Settings > Privacy & Security > Motion & Fitness > Nexara > ON
+
+  If the permission dialog does not appear, tap "Grant Permission" in the
+  Steps screen — it will open the app settings page directly.
+
+
+KNOWN LIMITATIONS
+-----------------
+  - Phone auth on iOS requires APNs for real phone numbers.
+    Without APNs configured in Firebase, only test numbers work.
+    To use real numbers: upload an APNs key in
+    Firebase Console > Project Settings > Cloud Messaging > Apple app configuration
+
+  - HealthKit step tracking requires a paid Apple Developer account ($99/year).
+    The app uses Pedometer (CoreMotion) instead, which is free.
+
+  - Push notifications are currently disabled (requires paid Apple Developer account).
+
+
+AVAILABLE SCRIPTS
+-----------------
+  npx expo start --dev-client    Start dev server (use after first build)
+  npx expo run:ios               Build and run on iOS simulator
+  npx expo run:ios --device      Build and run on physical iOS device
+  npx expo run:android           Build and run on Android emulator
+  npx expo run:android --device  Build and run on physical Android device
+  npm run lint                   Check for lint errors
+  npm run lint:fix               Auto-fix lint errors
+  npm run format                 Format all files with Prettier
