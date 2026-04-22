@@ -43,7 +43,7 @@ api.interceptors.response.use(
 
     // Step 2: try Firebase silent re-auth (Firebase session persists on device indefinitely)
     try {
-      const firebaseUser = auth.currentUser;
+      const firebaseUser = auth?.currentUser ?? null;
       if (firebaseUser) {
         const idToken = await firebaseUser.getIdToken(true); // force refresh
         const { data } = await axios.post(`${BASE_URL}/auth/phone`, { id_token: idToken });

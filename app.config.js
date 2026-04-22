@@ -33,6 +33,8 @@ module.exports = {
     },
 
     plugins: [
+      '@react-native-firebase/app',
+      '@react-native-firebase/auth',
       '@react-native-community/datetimepicker',
       [
         'expo-notifications',
