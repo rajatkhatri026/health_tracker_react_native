@@ -5,11 +5,13 @@ import { signInWithPhoneNumber, type ConfirmationResult, type ApplicationVerifie
 import { auth } from '../utils/firebase';
 
 // Minimal verifier for native — appVerificationDisabledForTesting bypasses
-// real reCAPTCHA but the SDK still requires an ApplicationVerifier object.
-const nativeVerifier: ApplicationVerifier = {
+// real reCAPTCHA but the SDK still requires an ApplicationVerifier object
+// with type, verify() and _reset() methods.
+const nativeVerifier = {
   type: 'recaptcha',
   verify: () => Promise.resolve('native-token'),
-};
+  _reset: () => {},
+} as unknown as ApplicationVerifier;
 import type { User } from '../types';
 import { phoneAuth, getMe } from '../api/auth';
 
