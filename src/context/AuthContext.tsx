@@ -1,8 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { signInWithPhoneNumber, type ConfirmationResult } from 'firebase/auth';
+import { signInWithPhoneNumber, type ConfirmationResult, type ApplicationVerifier } from 'firebase/auth';
 import { auth } from '../utils/firebase';
+
+// Minimal verifier for native — appVerificationDisabledForTesting bypasses
+// real reCAPTCHA but the SDK still requires an ApplicationVerifier object.
+const nativeVerifier: ApplicationVerifier = {
+  type: 'recaptcha',
+  verify: () => Promise.resolve('native-token'),
+};
 import type { User } from '../types';
 import { phoneAuth, getMe } from '../api/auth';
 
@@ -70,11 +77,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         verifier = rv;
       }
     }
-    // On native: appVerificationDisabledForTesting=true in firebase.ts skips reCAPTCHA entirely
+    // On native: use dummy verifier — appVerificationDisabledForTesting bypasses real reCAPTCHA
+    if (Platform.OS !== 'web') {
+      verifier = nativeVerifier;
+    }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await signInWithPhoneNumber(auth, phone, verifier as any);
+      const result = await signInWithPhoneNumber(auth, phone, verifier as ApplicationVerifier);
       setConfirmationResult(result);
     } catch (e) {
       if (Platform.OS === 'web') {
