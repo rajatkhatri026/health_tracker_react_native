@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,26 +11,36 @@ import {
   Dimensions,
   StatusBar,
 } from 'react-native';
-import Svg, { Defs, LinearGradient, Stop, Circle, Ellipse } from 'react-native-svg';
-import { LinearGradient as ExpoLinearGradient } from 'expo-linear-gradient';
+import Svg, {
+  Defs,
+  LinearGradient as SvgGrad,
+  RadialGradient,
+  Stop,
+  Circle,
+  Ellipse,
+  Path,
+} from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import { updateProfile } from '../../api/profile';
 import { getPlatformStats, type PlatformStats } from '../../api/stats';
 import { useMetrics } from '../../hooks/useMetrics';
 import { useWorkouts } from '../../hooks/useWorkouts';
 import { useSleep } from '../../hooks/useSleep';
-import { COLORS, RADIUS } from '../../utils/theme';
+import { RADIUS } from '../../utils/theme';
 import { IconCheck, IconArrowLeft, IconChevronRight } from '../../components/icons/Icons';
 import NexaraLogo from '../../components/NexaraLogo/NexaraLogo';
 
 const { width, height } = Dimensions.get('window');
+const HERO_H = height * 0.3;
 
 const SLIDES = [
   {
     title: 'Track Your Goal',
     desc: 'Set personal goals and monitor every milestone. We help you stay on course with smart insights.',
     grad: ['#7C3AED', '#4F46E5'] as [string, string],
-    accent: '#A78BFA',
+    accent: '#7C3AED',
+    accentLight: '#EDE9FE',
     emoji: '🏆',
     statKey: 'steps' as const,
     statLabel: 'steps today',
@@ -39,7 +49,8 @@ const SLIDES = [
     title: 'Burn & Build',
     desc: 'Personalised workout plans that adapt to your pace. Train smarter, not harder.',
     grad: ['#06B6D4', '#0EA5E9'] as [string, string],
-    accent: '#67E8F9',
+    accent: '#0891B2',
+    accentLight: '#E0F2FE',
     emoji: '🔥',
     statKey: 'nutrition' as const,
     statLabel: 'kcal today',
@@ -48,31 +59,118 @@ const SLIDES = [
     title: 'Eat & Recover',
     desc: 'Nutrition tracking and sleep insights to fuel your body and maximise recovery every day.',
     grad: ['#10B981', '#059669'] as [string, string],
-    accent: '#6EE7B7',
+    accent: '#059669',
+    accentLight: '#D1FAE5',
     emoji: '🥗',
     statKey: 'sleep' as const,
     statLabel: 'hrs last sleep',
   },
 ];
 
-// Decorative blob SVG for slide top area
-const BlobDecor = ({ color, accent }: { color: string; accent: string }) => (
-  <Svg
-    width={width}
-    height={height * 0.5}
-    viewBox={`0 0 ${width} ${height * 0.5}`}
-    style={{ position: 'absolute', top: 0, left: 0 }}
-  >
+// ── Shared hero decor (same as AuthScreen) ───────────────────────────────────
+const HeroDecor: React.FC = () => (
+  <Svg width={width} height={HERO_H} style={{ position: 'absolute', top: 0 }}>
     <Defs>
-      <LinearGradient id="blobGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <Stop offset="0%" stopColor={color} stopOpacity="0.25" />
-        <Stop offset="100%" stopColor={accent} stopOpacity="0.1" />
-      </LinearGradient>
+      <RadialGradient id="od1" cx="85%" cy="10%" r="55%">
+        <Stop offset="0%" stopColor="#C4B5FD" stopOpacity="0.45" />
+        <Stop offset="100%" stopColor="#7C3AED" stopOpacity="0" />
+      </RadialGradient>
+      <RadialGradient id="od2" cx="10%" cy="90%" r="50%">
+        <Stop offset="0%" stopColor="#67E8F9" stopOpacity="0.35" />
+        <Stop offset="100%" stopColor="#06B6D4" stopOpacity="0" />
+      </RadialGradient>
+      <SvgGrad id="odShimmer" x1="0%" y1="0%" x2="100%" y2="0%">
+        <Stop offset="0%" stopColor="rgba(255,255,255,0)" />
+        <Stop offset="30%" stopColor="rgba(255,255,255,0.35)" />
+        <Stop offset="70%" stopColor="rgba(167,139,250,0.5)" />
+        <Stop offset="100%" stopColor="rgba(255,255,255,0)" />
+      </SvgGrad>
     </Defs>
-    <Ellipse cx={width * 0.5} cy={-30} rx={width * 0.85} ry={height * 0.38} fill="url(#blobGrad)" />
-    <Circle cx={width * 0.85} cy={height * 0.12} r={60} fill={accent} fillOpacity="0.08" />
-    <Circle cx={width * 0.1} cy={height * 0.3} r={40} fill={color} fillOpacity="0.1" />
+    <Ellipse
+      cx={width * 0.88}
+      cy={HERO_H * 0.1}
+      rx={width * 0.55}
+      ry={HERO_H * 0.75}
+      fill="url(#od1)"
+    />
+    <Ellipse
+      cx={width * 0.08}
+      cy={HERO_H * 0.95}
+      rx={width * 0.45}
+      ry={HERO_H * 0.65}
+      fill="url(#od2)"
+    />
+    <Circle
+      cx={width * 0.92}
+      cy={HERO_H * 0.18}
+      r={32}
+      fill="none"
+      stroke="rgba(255,255,255,0.12)"
+      strokeWidth={1.5}
+    />
+    <Circle
+      cx={width * 0.92}
+      cy={HERO_H * 0.18}
+      r={52}
+      fill="none"
+      stroke="rgba(255,255,255,0.06)"
+      strokeWidth={1}
+    />
+    <Circle
+      cx={width * 0.06}
+      cy={HERO_H * 0.82}
+      r={24}
+      fill="none"
+      stroke="rgba(103,232,249,0.18)"
+      strokeWidth={1}
+    />
+    <Path
+      d={`M 0 ${HERO_H - 1} L ${width} ${HERO_H - 1}`}
+      stroke="url(#odShimmer)"
+      strokeWidth={1.5}
+    />
   </Svg>
+);
+
+// ── Shared hero panel ─────────────────────────────────────────────────────────
+const Hero: React.FC = () => (
+  <LinearGradient
+    colors={['#1E0B3E', '#5B21B6', '#0C4A6E']}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 1 }}
+    style={{
+      height: HERO_H,
+      width: '100%',
+      justifyContent: 'flex-end',
+      paddingHorizontal: 28,
+      paddingBottom: 28,
+    }}
+  >
+    <HeroDecor />
+    <View
+      style={{
+        shadowColor: '#A78BFA',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.9,
+        shadowRadius: 24,
+        elevation: 10,
+      }}
+    >
+      <NexaraLogo size={46} variant="full" showText />
+    </View>
+    <Text
+      style={{
+        fontSize: 13,
+        color: 'rgba(196,181,253,0.85)',
+        marginTop: -4,
+        marginLeft: 56,
+        fontWeight: '500',
+        letterSpacing: 0.4,
+      }}
+    >
+      Your intelligent health companion
+    </Text>
+  </LinearGradient>
 );
 
 type Stage = 'welcome' | 'slides' | 'profile';
@@ -84,6 +182,7 @@ const OnboardingScreen: React.FC = () => {
   const [name, setName] = useState(user?.name ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [nameFocused, setNameFocused] = useState(false);
 
   const { latest } = useMetrics({ days: 1 });
   useWorkouts();
@@ -91,7 +190,9 @@ const OnboardingScreen: React.FC = () => {
   const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null);
 
   useEffect(() => {
-    getPlatformStats().then(setPlatformStats);
+    getPlatformStats()
+      .then(setPlatformStats)
+      .catch(() => {});
   }, []);
 
   const fmt = (n: number) =>
@@ -132,109 +233,108 @@ const OnboardingScreen: React.FC = () => {
     }
   };
 
-  // ── Welcome ─────────────────────────────────────────────────────────────────
+  // ── Welcome ──────────────────────────────────────────────────────────────────
   if (stage === 'welcome') {
     return (
-      <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+      <View style={{ flex: 1, backgroundColor: '#F4F5FA' }}>
         <StatusBar barStyle="light-content" />
-        {/* Radial glow */}
-        <Svg width={width} height={height} style={{ position: 'absolute' }}>
-          <Defs>
-            <LinearGradient id="radial" x1="0%" y1="0%" x2="100%" y2="100%">
-              <Stop offset="0%" stopColor="#7C3AED" stopOpacity="0.3" />
-              <Stop offset="60%" stopColor="#06B6D4" stopOpacity="0.1" />
-              <Stop offset="100%" stopColor="#0A0E27" stopOpacity="0" />
-            </LinearGradient>
-          </Defs>
-          <Ellipse
-            cx={width * 0.5}
-            cy={height * 0.35}
-            rx={width * 0.8}
-            ry={height * 0.4}
-            fill="url(#radial)"
-          />
-          <Circle cx={width * 0.15} cy={height * 0.2} r={80} fill="#7C3AED" fillOpacity="0.06" />
-          <Circle cx={width * 0.85} cy={height * 0.5} r={120} fill="#06B6D4" fillOpacity="0.05" />
-        </Svg>
+        <Hero />
 
-        <View
-          style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30 }}
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 32, paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}
         >
-          {/* Logo */}
-          <View style={{ alignItems: 'center', marginBottom: 32, gap: 14 }}>
-            <NexaraLogo size={80} variant="icon" />
-            <Text style={{ fontSize: 44, fontWeight: '800', color: '#fff', letterSpacing: -1.5 }}>
-              Nex<Text style={{ color: '#A78BFA' }}>ara</Text>
-            </Text>
-          </View>
+          {/* Heading */}
           <Text
             style={{
-              fontSize: 16,
-              color: COLORS.textSub,
-              marginTop: 12,
-              textAlign: 'center',
-              lineHeight: 24,
+              fontSize: 11,
+              fontWeight: '700',
+              color: '#7C3AED',
+              letterSpacing: 1,
+              marginBottom: 8,
             }}
           >
-            Your premium fitness companion.{'\n'}Train. Track. Transform.
+            GETTING STARTED
+          </Text>
+          <Text
+            style={{
+              fontSize: 26,
+              fontWeight: '800',
+              color: '#0F0F1A',
+              letterSpacing: -0.5,
+              marginBottom: 8,
+            }}
+          >
+            Your premium{'\n'}health companion
+          </Text>
+          <Text style={{ fontSize: 14, color: '#6B7280', lineHeight: 22, marginBottom: 24 }}>
+            Train. Track. Transform.{'\n'}Join thousands already on their journey.
           </Text>
 
-          {/* Stat previews — real user data */}
-          <View style={{ flexDirection: 'row', gap: 12, marginTop: 48 }}>
+          {/* Stat cards */}
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 28 }}>
             {previewStats.map((s) => (
               <View
                 key={s.label}
                 style={{
                   flex: 1,
-                  backgroundColor: 'rgba(255,255,255,0.06)',
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.1)',
+                  backgroundColor: '#fff',
                   borderRadius: 16,
                   padding: 14,
                   alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: '#E4E7F0',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 6,
+                  elevation: 2,
                 }}
               >
-                <Text style={{ fontSize: 20, fontWeight: '800', color: '#fff' }}>{s.value}</Text>
                 <Text
-                  style={{
-                    fontSize: 11,
-                    color: COLORS.textMuted,
-                    marginTop: 2,
-                    textAlign: 'center',
-                  }}
+                  style={{ fontSize: 18, fontWeight: '800', color: '#0F0F1A', marginBottom: 2 }}
+                >
+                  {s.value}
+                </Text>
+                <Text
+                  style={{ fontSize: 10, color: '#9CA3AF', fontWeight: '600', textAlign: 'center' }}
                 >
                   {s.label}
                 </Text>
               </View>
             ))}
           </View>
-        </View>
 
-        {/* CTA */}
-        <View style={{ paddingHorizontal: 30, paddingBottom: 52 }}>
-          <ExpoLinearGradient
-            colors={['#7C3AED', '#06B6D4']}
+          {/* CTA */}
+          <LinearGradient
+            colors={['#7C3AED', '#0891B2']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={{
-              borderRadius: RADIUS.full,
+              borderRadius: 16,
               shadowColor: '#7C3AED',
-              shadowOffset: { width: 0, height: 12 },
-              shadowOpacity: 0.5,
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.35,
               shadowRadius: 20,
               elevation: 10,
             }}
           >
             <TouchableOpacity
               onPress={() => setStage('slides')}
-              style={{ height: 60, alignItems: 'center', justifyContent: 'center' }}
+              style={{
+                height: 58,
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'row',
+                gap: 10,
+              }}
             >
-              <Text style={{ color: '#fff', fontSize: 17, fontWeight: '700', letterSpacing: 0.3 }}>
-                Get Started
-              </Text>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Get Started</Text>
+              <IconChevronRight size={18} color="#fff" strokeWidth={2.5} />
             </TouchableOpacity>
-          </ExpoLinearGradient>
-        </View>
+          </LinearGradient>
+        </ScrollView>
       </View>
     );
   }
@@ -245,206 +345,266 @@ const OnboardingScreen: React.FC = () => {
     const isLast = slideIndex === SLIDES.length - 1;
 
     return (
-      <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+      <View style={{ flex: 1, backgroundColor: '#F4F5FA' }}>
         <StatusBar barStyle="light-content" />
-        <BlobDecor color={slide.grad[0]} accent={slide.accent} />
 
-        {/* Illustration area */}
-        <View style={{ height: height * 0.5, alignItems: 'center', justifyContent: 'center' }}>
-          {/* Large emoji + glow ring */}
+        {/* Slide hero — colorful gradient, same height */}
+        <LinearGradient
+          colors={[...slide.grad, slide.grad[1]] as [string, string, string]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ height: HERO_H, width: '100%', alignItems: 'center', justifyContent: 'center' }}
+        >
+          {/* Subtle rings */}
+          <Svg width={width} height={HERO_H} style={{ position: 'absolute' }}>
+            <Circle
+              cx={width * 0.85}
+              cy={HERO_H * 0.2}
+              r={50}
+              fill="none"
+              stroke="rgba(255,255,255,0.1)"
+              strokeWidth={1}
+            />
+            <Circle
+              cx={width * 0.15}
+              cy={HERO_H * 0.8}
+              r={35}
+              fill="none"
+              stroke="rgba(255,255,255,0.08)"
+              strokeWidth={1}
+            />
+          </Svg>
+          {/* Emoji in glow circle */}
           <View
             style={{
-              width: 160,
-              height: 160,
-              borderRadius: 80,
-              backgroundColor: `${slide.grad[0]}22`,
+              width: 100,
+              height: 100,
+              borderRadius: 50,
+              backgroundColor: 'rgba(255,255,255,0.15)',
               borderWidth: 1.5,
-              borderColor: `${slide.grad[0]}55`,
+              borderColor: 'rgba(255,255,255,0.25)',
               alignItems: 'center',
               justifyContent: 'center',
-              shadowColor: slide.grad[0],
-              shadowOffset: { width: 0, height: 0 },
-              shadowOpacity: 0.6,
-              shadowRadius: 30,
-              elevation: 12,
             }}
           >
-            <Text style={{ fontSize: 72 }}>{slide.emoji}</Text>
+            <Text style={{ fontSize: 52 }}>{slide.emoji}</Text>
           </View>
-          {/* Floating stat chip — real data */}
+        </LinearGradient>
+
+        {/* Content */}
+        <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 32 }}>
+          {/* Step dots */}
+          <View style={{ flexDirection: 'row', gap: 6, marginBottom: 24 }}>
+            {SLIDES.map((_, i) => (
+              <View
+                key={i}
+                style={{
+                  height: 4,
+                  borderRadius: 2,
+                  width: i === slideIndex ? 28 : 6,
+                  backgroundColor: i === slideIndex ? slide.accent : '#D1D5DB',
+                }}
+              />
+            ))}
+          </View>
+
+          <Text
+            style={{
+              fontSize: 26,
+              fontWeight: '800',
+              color: '#0F0F1A',
+              letterSpacing: -0.5,
+              marginBottom: 10,
+            }}
+          >
+            {slide.title}
+          </Text>
+          <Text style={{ fontSize: 14, color: '#6B7280', lineHeight: 22, marginBottom: 24 }}>
+            {slide.desc}
+          </Text>
+
+          {/* Stat chip */}
           {(() => {
             const rawVal = latest[slide.statKey]?.value;
             const displayVal = rawVal !== undefined ? String(rawVal) : '0';
             return (
               <View
                 style={{
-                  position: 'absolute',
-                  bottom: height * 0.08,
-                  right: width * 0.08,
-                  backgroundColor: 'rgba(255,255,255,0.1)',
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.2)',
-                  borderRadius: 16,
-                  padding: 12,
+                  alignSelf: 'flex-start',
+                  backgroundColor: slide.accentLight,
+                  borderRadius: 12,
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  marginBottom: 'auto' as any,
                 }}
               >
-                <Text style={{ color: slide.accent, fontSize: 16, fontWeight: '800' }}>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: slide.accent }}>
                   {displayVal}
                 </Text>
-                <Text style={{ color: COLORS.textMuted, fontSize: 11, fontWeight: '400' }}>
+                <Text style={{ fontSize: 12, color: slide.accent, fontWeight: '500' }}>
                   {slide.statLabel}
                 </Text>
               </View>
             );
           })()}
-        </View>
 
-        {/* Text + nav */}
-        <View style={{ flex: 1, paddingHorizontal: 30 }}>
-          <Text
-            style={{
-              fontSize: 32,
-              fontWeight: '800',
-              color: '#fff',
-              letterSpacing: -0.8,
-              lineHeight: 40,
-            }}
-          >
-            {slide.title}
-          </Text>
-          <Text style={{ fontSize: 15, color: COLORS.textSub, marginTop: 14, lineHeight: 24 }}>
-            {slide.desc}
-          </Text>
-
+          {/* Nav row */}
           <View
             style={{
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
-              marginTop: 'auto' as any,
-              paddingBottom: 48,
+              paddingBottom: 36,
+              paddingTop: 16,
             }}
           >
-            {/* Dots */}
-            <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-              {SLIDES.map((_, i) => (
-                <View
-                  key={i}
-                  style={{
-                    height: 6,
-                    borderRadius: 3,
-                    width: i === slideIndex ? 28 : 6,
-                    backgroundColor: i === slideIndex ? slide.grad[0] : 'rgba(255,255,255,0.2)',
-                  }}
-                />
-              ))}
-            </View>
+            <TouchableOpacity
+              onPress={() => (slideIndex === 0 ? setStage('welcome') : setSlideIndex((i) => i - 1))}
+              style={{ padding: 8 }}
+            >
+              <IconArrowLeft size={20} color="#6B7280" />
+            </TouchableOpacity>
 
-            {/* Next button */}
-            <ExpoLinearGradient
+            <LinearGradient
               colors={slide.grad}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={{
-                borderRadius: RADIUS.full,
+                borderRadius: 30,
                 shadowColor: slide.grad[0],
-                shadowOffset: { width: 0, height: 8 },
-                shadowOpacity: 0.5,
-                shadowRadius: 16,
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: 0.4,
+                shadowRadius: 14,
                 elevation: 8,
               }}
             >
               <TouchableOpacity
-                onPress={() => {
-                  if (isLast) {
-                    setStage('profile');
-                  } else {
-                    setSlideIndex((s) => s + 1);
-                  }
-                }}
-                style={{ width: 64, height: 64, alignItems: 'center', justifyContent: 'center' }}
+                onPress={() => (isLast ? setStage('profile') : setSlideIndex((i) => i + 1))}
+                style={{ width: 60, height: 60, alignItems: 'center', justifyContent: 'center' }}
               >
-                <IconChevronRight size={26} color="#fff" strokeWidth={2.5} />
+                <IconChevronRight size={24} color="#fff" strokeWidth={2.5} />
               </TouchableOpacity>
-            </ExpoLinearGradient>
+            </LinearGradient>
           </View>
         </View>
       </View>
     );
   }
 
-  // ── Profile Setup ───────────────────────────────────────────────────────────
+  // ── Profile Setup ────────────────────────────────────────────────────────────
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: COLORS.bg }}
+      style={{ flex: 1, backgroundColor: '#F4F5FA' }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <StatusBar barStyle="light-content" />
+      <Hero />
+
       <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          paddingHorizontal: 30,
-          paddingTop: 72,
-          paddingBottom: 40,
-        }}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 32, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <TouchableOpacity onPress={() => setStage('slides')} style={{ marginBottom: 32 }}>
-          <IconArrowLeft size={20} color={COLORS.textSub} />
+        <TouchableOpacity onPress={() => setStage('slides')} style={{ marginBottom: 28 }}>
+          <IconArrowLeft size={20} color="#6B7280" />
         </TouchableOpacity>
 
-        <Text style={{ fontSize: 32, fontWeight: '800', color: '#fff', letterSpacing: -0.8 }}>
-          What&apos;s your{'\n'}name?
+        <Text
+          style={{
+            fontSize: 11,
+            fontWeight: '700',
+            color: '#7C3AED',
+            letterSpacing: 1,
+            marginBottom: 8,
+          }}
+        >
+          ALMOST THERE
         </Text>
         <Text
           style={{
-            fontSize: 15,
-            color: COLORS.textSub,
-            marginTop: 12,
-            marginBottom: 40,
-            lineHeight: 24,
+            fontSize: 26,
+            fontWeight: '800',
+            color: '#0F0F1A',
+            letterSpacing: -0.5,
+            marginBottom: 8,
           }}
         >
+          What&apos;s your name?
+        </Text>
+        <Text style={{ fontSize: 14, color: '#6B7280', lineHeight: 22, marginBottom: 28 }}>
           Personalise your experience so we can set up the right goals for you.
         </Text>
 
+        <Text
+          style={{
+            fontSize: 11,
+            fontWeight: '700',
+            color: '#6B7280',
+            letterSpacing: 0.8,
+            marginBottom: 8,
+          }}
+        >
+          FULL NAME
+        </Text>
         <View
           style={{
-            backgroundColor: COLORS.bgInput,
-            borderWidth: 1,
-            borderColor: COLORS.border,
-            borderRadius: RADIUS.md,
+            backgroundColor: '#fff',
+            borderWidth: 2,
+            borderColor: nameFocused ? '#7C3AED' : '#E4E7F0',
+            borderRadius: 16,
             paddingHorizontal: 18,
-            height: 56,
+            height: 58,
             justifyContent: 'center',
-            marginBottom: 16,
+            marginBottom: 8,
+            shadowColor: nameFocused ? '#7C3AED' : '#000',
+            shadowOffset: { width: 0, height: 3 },
+            shadowOpacity: nameFocused ? 0.12 : 0.05,
+            shadowRadius: 10,
+            elevation: 3,
           }}
         >
           <TextInput
-            style={{ fontSize: 15, color: '#fff', fontWeight: '500' }}
+            style={{ fontSize: 15, color: '#0F0F1A', fontWeight: '500' }}
             value={name}
             onChangeText={setName}
             placeholder="Your full name"
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor="#C4C9D4"
             autoCapitalize="words"
             autoFocus
+            onFocus={() => setNameFocused(true)}
+            onBlur={() => setNameFocused(false)}
           />
         </View>
 
         {error ? (
-          <Text style={{ color: '#EF4444', fontSize: 13, marginBottom: 14 }}>{error}</Text>
+          <View
+            style={{
+              backgroundColor: '#FEF2F2',
+              borderWidth: 1,
+              borderColor: '#FECACA',
+              borderRadius: 12,
+              padding: 12,
+              marginBottom: 16,
+            }}
+          >
+            <Text style={{ color: '#EF4444', fontSize: 13 }}>{error}</Text>
+          </View>
         ) : null}
 
-        <ExpoLinearGradient
-          colors={['#7C3AED', '#06B6D4']}
+        <LinearGradient
+          colors={['#7C3AED', '#0891B2']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={{
-            borderRadius: RADIUS.full,
+            borderRadius: 16,
             marginTop: 8,
             shadowColor: '#7C3AED',
-            shadowOffset: { width: 0, height: 10 },
-            shadowOpacity: 0.45,
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.35,
             shadowRadius: 20,
             elevation: 10,
           }}
@@ -471,7 +631,7 @@ const OnboardingScreen: React.FC = () => {
               </>
             )}
           </TouchableOpacity>
-        </ExpoLinearGradient>
+        </LinearGradient>
       </ScrollView>
     </KeyboardAvoidingView>
   );

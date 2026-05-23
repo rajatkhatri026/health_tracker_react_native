@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { getSteps, syncSteps, syncStepsBulk, type DailyStepsRecord } from '../api/steps';
 import {
@@ -21,6 +22,7 @@ interface UseStepsResult {
   goalSteps: number;
   progress: number; // 0–1
   loading: boolean;
+  error: string | null;
   supported: boolean; // false on web
   permissionGranted: boolean;
   refresh: () => Promise<void>;
@@ -28,6 +30,7 @@ interface UseStepsResult {
 }
 
 const DEFAULT_GOAL = 10000;
+const STEP_GOAL_KEY = 'nexara_step_goal';
 
 export const useSteps = (): UseStepsResult => {
   const { user } = useAuth();
@@ -36,7 +39,17 @@ export const useSteps = (): UseStepsResult => {
   const [todaySteps, setTodaySteps] = useState(0);
   const [weeklySteps, setWeeklySteps] = useState<DailyStepsRecord[]>([]);
   const [goalSteps, setGoalSteps] = useState(DEFAULT_GOAL);
+
+  // Load persisted goal from AsyncStorage (set by useAppPreferences)
+  useEffect(() => {
+    AsyncStorage.getItem(STEP_GOAL_KEY)
+      .then((v) => {
+        if (v) setGoalSteps(parseInt(v, 10));
+      })
+      .catch(() => {});
+  }, []);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [permissionGranted, setPermissionGranted] = useState(false);
   const supported = isStepTrackingSupported();
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
@@ -50,17 +63,20 @@ export const useSteps = (): UseStepsResult => {
     setPermissionGranted(ok);
     if (!ok) return;
 
-    // Sync weekly steps to backend in one bulk call
+    // Sync the past 6 days to backend (exclude today — handled separately below
+    // so weekly bulk-sync can't overwrite today with stale accumulated data).
     const weekly = await getWeeklySteps();
-    if (weekly.length > 0) {
-      await syncStepsBulk(userId, weekly).catch(() => {});
+    const todayStr = localDateStr();
+    const pastDays = weekly.filter((r) => r.date !== todayStr);
+    if (pastDays.length > 0) {
+      await syncStepsBulk(userId, pastDays).catch(() => {});
     }
 
-    // Get today's live count
+    // Get today's live count and sync separately
     const today = await getTodaySteps();
     if (today !== null) {
       setTodaySteps(today);
-      await syncSteps(userId, localDateStr(), today).catch(() => {});
+      await syncSteps(userId, todayStr, today).catch(() => {});
     }
   }, [userId, supported]);
 
@@ -68,16 +84,24 @@ export const useSteps = (): UseStepsResult => {
     if (!userId) return;
     const records = await getSteps(userId, 7);
     setWeeklySteps(records);
+    // Always set today's steps from the backend record for today's date.
+    // If no record exists yet (genuinely 0 steps day), set to 0 explicitly —
+    // never leave a stale previous-day value in state.
     const todayRecord = records.find((r) => r.date === localDateStr());
-    if (todayRecord) setTodaySteps(todayRecord.steps);
+    setTodaySteps(todayRecord?.steps ?? 0);
   }, [userId]);
 
   const refresh = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
+    setError(null);
     try {
+      const stored = await AsyncStorage.getItem(STEP_GOAL_KEY).catch(() => null);
+      if (stored) setGoalSteps(parseInt(stored, 10));
       await syncFromDevice();
       await fetchFromBackend();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load steps');
     } finally {
       setLoading(false);
     }
@@ -110,9 +134,13 @@ export const useSteps = (): UseStepsResult => {
     goalSteps,
     progress,
     loading,
+    error,
     supported,
     permissionGranted,
     refresh,
-    setGoal: setGoalSteps,
+    setGoal: (steps: number) => {
+      setGoalSteps(steps);
+      AsyncStorage.setItem(STEP_GOAL_KEY, String(steps)).catch(() => {});
+    },
   };
 };

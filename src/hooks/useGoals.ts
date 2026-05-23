@@ -56,19 +56,27 @@ export const useGoals = (): UseGoalsResult => {
   );
 
   const addGoal = useCallback(
-    async (payload: CreateGoalPayload) => {
+    async (payload: CreateGoalPayload): Promise<void> => {
       if (!user) return;
-      await createGoal(user.user_id, payload);
-      await fetch();
+      try {
+        await createGoal(user.user_id, payload);
+        await fetch();
+      } catch (e) {
+        throw e instanceof Error ? e : new Error('Failed to create goal');
+      }
     },
     [user, fetch]
   );
 
   const markProgress = useCallback(
-    async (goalId: string, value: number) => {
+    async (goalId: string, value: number): Promise<void> => {
       if (!user) return;
-      await updateGoal(user.user_id, goalId, { target_value: value });
-      await fetch();
+      try {
+        await updateGoal(user.user_id, goalId, { target_value: value });
+        await fetch();
+      } catch (e) {
+        throw e instanceof Error ? e : new Error('Failed to update goal');
+      }
     },
     [user, fetch]
   );

@@ -1,19 +1,21 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  ActivityIndicator,
   Linking,
+  Animated,
 } from 'react-native';
+import { useEntranceAnimation, entranceStyle } from '../../hooks/useEntranceAnimation';
 import Svg, { Circle, Defs, LinearGradient as SvgGrad, Stop } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSteps } from '../../hooks/useSteps';
 import { COLORS, RADIUS } from '../../utils/theme';
 import GlassCard from '../../components/GlassCard/GlassCard';
+import { StepsSkeleton } from '../../components/Skeleton/Skeleton';
 
 const CHART_H = 120;
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -33,12 +35,15 @@ const StepsScreen: React.FC = () => {
     setGoal,
   } = useSteps();
 
+  const [ss0, ss1, ss2, ss3] = useEntranceAnimation(4, { initialDelay: 60, stagger: 110 });
+  const scrollRef = useRef<ScrollView>(null);
   const refreshRef = React.useRef(refresh);
   React.useEffect(() => {
     refreshRef.current = refresh;
   }, [refresh]);
   useFocusEffect(
     useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
       refreshRef.current();
     }, [])
   );
@@ -61,95 +66,105 @@ const StepsScreen: React.FC = () => {
   });
   const activeDays = weeklySteps.filter((d) => d.steps >= goalSteps).length;
 
+  if (loading) {
+    return <StepsSkeleton />;
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" />
       <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
+        automaticallyAdjustContentInsets={false}
+        contentInsetAdjustmentBehavior="never"
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: 110 }}
       >
         {/* Header */}
-        <LinearGradient
-          colors={['#1A0A3C', '#0D1F3C']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{
-            paddingTop: 56,
-            paddingHorizontal: 24,
-            paddingBottom: 32,
-            borderBottomLeftRadius: 32,
-            borderBottomRightRadius: 32,
-          }}
-        >
-          <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 24 }}>
-            Step Tracker
-          </Text>
+        <Animated.View style={entranceStyle(ss0)}>
+          <LinearGradient
+            colors={['#F4F5FA', '#F4F5FA']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              paddingTop: 56,
+              paddingHorizontal: 24,
+              paddingBottom: 32,
+              borderBottomLeftRadius: 32,
+              borderBottomRightRadius: 32,
+            }}
+          >
+            <Text style={{ fontSize: 18, fontWeight: '800', color: COLORS.text, marginBottom: 24 }}>
+              Step Tracker
+            </Text>
 
-          {/* Ring */}
-          <View style={{ alignItems: 'center', marginBottom: 12 }}>
-            <Svg width={220} height={220} viewBox="0 0 220 220">
-              <Defs>
-                <SvgGrad id="stepGrad" x1="0" y1="0" x2="1" y2="0">
-                  <Stop offset="0" stopColor="#7C3AED" />
-                  <Stop offset="1" stopColor="#06B6D4" />
-                </SvgGrad>
-              </Defs>
-              {/* Track */}
-              <Circle
-                cx={110}
-                cy={110}
-                r={R}
-                stroke="rgba(255,255,255,0.08)"
-                strokeWidth={stroke}
-                fill="none"
-              />
-              {/* Progress */}
-              <Circle
-                cx={110}
-                cy={110}
-                r={R}
-                stroke="url(#stepGrad)"
-                strokeWidth={stroke}
-                fill="none"
-                strokeDasharray={`${strokeDash} ${circumference}`}
-                strokeLinecap="round"
-                transform="rotate(-90 110 110)"
-              />
-            </Svg>
-            {/* Center text overlay */}
+            {/* Ring */}
+            <View style={{ alignItems: 'center', marginBottom: 12 }}>
+              <Svg width={220} height={220} viewBox="0 0 220 220">
+                <Defs>
+                  <SvgGrad id="stepGrad" x1="0" y1="0" x2="1" y2="0">
+                    <Stop offset="0" stopColor="#7C3AED" />
+                    <Stop offset="1" stopColor="#06B6D4" />
+                  </SvgGrad>
+                </Defs>
+                {/* Track */}
+                <Circle cx={110} cy={110} r={R} stroke="#F0EEFF" strokeWidth={stroke} fill="none" />
+                {/* Progress */}
+                <Circle
+                  cx={110}
+                  cy={110}
+                  r={R}
+                  stroke="url(#stepGrad)"
+                  strokeWidth={stroke}
+                  fill="none"
+                  strokeDasharray={`${strokeDash} ${circumference}`}
+                  strokeLinecap="round"
+                  transform="rotate(-90 110 110)"
+                />
+              </Svg>
+              {/* Center text overlay */}
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text
+                  style={{ fontSize: 44, fontWeight: '900', color: COLORS.text, letterSpacing: -2 }}
+                >
+                  {formatSteps(todaySteps)}
+                </Text>
+                <Text style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 2 }}>
+                  steps today
+                </Text>
+                <Text style={{ fontSize: 13, color: '#A78BFA', fontWeight: '700', marginTop: 4 }}>
+                  {pct}% of goal
+                </Text>
+              </View>
+            </View>
+
+            {/* Goal row */}
             <View
               style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                alignItems: 'center',
+                flexDirection: 'row',
                 justifyContent: 'center',
+                alignItems: 'center',
+                gap: 8,
               }}
             >
-              <Text style={{ fontSize: 44, fontWeight: '900', color: '#fff', letterSpacing: -2 }}>
-                {formatSteps(todaySteps)}
-              </Text>
-              <Text style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 2 }}>
-                steps today
-              </Text>
-              <Text style={{ fontSize: 13, color: '#A78BFA', fontWeight: '700', marginTop: 4 }}>
-                {pct}% of goal
+              <Text style={{ color: COLORS.textMuted, fontSize: 13 }}>Daily goal:</Text>
+              <Text style={{ color: '#A78BFA', fontSize: 13, fontWeight: '700' }}>
+                {goalSteps.toLocaleString()} steps
               </Text>
             </View>
-          </View>
-
-          {/* Goal row */}
-          <View
-            style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 }}
-          >
-            <Text style={{ color: COLORS.textMuted, fontSize: 13 }}>Daily goal:</Text>
-            <Text style={{ color: '#A78BFA', fontSize: 13, fontWeight: '700' }}>
-              {goalSteps.toLocaleString()} steps
-            </Text>
-          </View>
-        </LinearGradient>
+          </LinearGradient>
+        </Animated.View>
 
         <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
           {/* Not supported banner */}
@@ -210,36 +225,37 @@ const StepsScreen: React.FC = () => {
           )}
 
           {/* Weekly stats */}
-          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
-            {[
-              { label: 'Week Total', value: formatSteps(weekTotal), color: '#A78BFA' },
-              { label: 'Daily Avg', value: formatSteps(weekAvg), color: '#06B6D4' },
-              { label: 'Goal Days', value: `${activeDays}/7`, color: '#10B981' },
-            ].map((s) => (
-              <GlassCard key={s.label} style={{ flex: 1, alignItems: 'center' }} padding={14}>
-                <Text style={{ fontSize: 20, fontWeight: '800', color: s.color }}>{s.value}</Text>
-                <Text
-                  style={{
-                    fontSize: 10,
-                    color: COLORS.textMuted,
-                    marginTop: 3,
-                    textAlign: 'center',
-                  }}
-                >
-                  {s.label}
-                </Text>
-              </GlassCard>
-            ))}
-          </View>
-
+          <Animated.View style={entranceStyle(ss1)}>
+            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
+              {[
+                { label: 'Week Total', value: formatSteps(weekTotal), color: '#A78BFA' },
+                { label: 'Daily Avg', value: formatSteps(weekAvg), color: '#06B6D4' },
+                { label: 'Goal Days', value: `${activeDays}/7`, color: '#10B981' },
+              ].map((s) => (
+                <GlassCard key={s.label} style={{ flex: 1, alignItems: 'center' }} padding={14}>
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: s.color }}>{s.value}</Text>
+                  <Text
+                    style={{
+                      fontSize: 10,
+                      color: COLORS.textMuted,
+                      marginTop: 3,
+                      textAlign: 'center',
+                    }}
+                  >
+                    {s.label}
+                  </Text>
+                </GlassCard>
+              ))}
+            </View>
+          </Animated.View>
           {/* Weekly bar chart */}
-          <GlassCard padding={16} style={{ marginBottom: 20 }}>
-            <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff', marginBottom: 16 }}>
-              This Week
-            </Text>
-            {loading ? (
-              <ActivityIndicator color="#7C3AED" style={{ height: CHART_H }} />
-            ) : (
+          <Animated.View style={entranceStyle(ss2)}>
+            <GlassCard padding={16} style={{ marginBottom: 20 }}>
+              <Text
+                style={{ fontSize: 13, fontWeight: '700', color: COLORS.text, marginBottom: 16 }}
+              >
+                This Week
+              </Text>
               <View
                 style={{
                   flexDirection: 'row',
@@ -283,7 +299,7 @@ const StepsScreen: React.FC = () => {
                               ? ['#7C3AED', '#06B6D4']
                               : metGoal
                                 ? ['#059669', '#10B981']
-                                : ['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.1)']
+                                : ['#F0EEFF', '#F0EEFF']
                           }
                           start={{ x: 0, y: 1 }}
                           end={{ x: 0, y: 0 }}
@@ -307,116 +323,130 @@ const StepsScreen: React.FC = () => {
                   );
                 })}
               </View>
-            )}
-            {/* Goal line label */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
-              <View style={{ width: 12, height: 2, backgroundColor: '#10B981', borderRadius: 1 }} />
-              <Text style={{ fontSize: 11, color: COLORS.textMuted }}>
-                Green = goal reached ({goalSteps.toLocaleString()} steps)
-              </Text>
-            </View>
-          </GlassCard>
-
-          {/* Goal setter */}
-          <GlassCard padding={16} style={{ marginBottom: 20 }}>
-            <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff', marginBottom: 14 }}>
-              Daily Goal
-            </Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {[5000, 7500, 8000, 10000, 12000, 15000].map((g) => (
-                <TouchableOpacity key={g} onPress={() => setGoal(g)}>
-                  {goalSteps === g ? (
-                    <LinearGradient
-                      colors={['#7C3AED', '#06B6D4']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={{
-                        borderRadius: RADIUS.full,
-                        paddingHorizontal: 16,
-                        paddingVertical: 8,
-                      }}
-                    >
-                      <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>
-                        {g.toLocaleString()}
-                      </Text>
-                    </LinearGradient>
-                  ) : (
-                    <View
-                      style={{
-                        borderRadius: RADIUS.full,
-                        paddingHorizontal: 16,
-                        paddingVertical: 8,
-                        backgroundColor: COLORS.bgCard,
-                        borderWidth: 1,
-                        borderColor: COLORS.border,
-                      }}
-                    >
-                      <Text style={{ color: COLORS.textSub, fontSize: 12 }}>
-                        {g.toLocaleString()}
-                      </Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          </GlassCard>
-
-          {/* Best day */}
-          {bestDay.steps > 0 && (
-            <GlassCard padding={16} style={{ marginBottom: 20 }}>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff', marginBottom: 6 }}>
-                🏆 Best Day This Week
-              </Text>
-              <Text style={{ fontSize: 28, fontWeight: '900', color: '#A78BFA' }}>
-                {bestDay.steps.toLocaleString()}
-              </Text>
-              <Text style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>
-                {new Date(bestDay.date + 'T12:00:00').toLocaleDateString([], {
-                  weekday: 'long',
-                  month: 'short',
-                  day: 'numeric',
-                })}
-              </Text>
-            </GlassCard>
-          )}
-
-          {/* How it works */}
-          <GlassCard padding={16}>
-            <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff', marginBottom: 10 }}>
-              How it works
-            </Text>
-            {[
-              {
-                icon: '📱',
-                title: 'Hardware counting',
-                desc: "Your phone's motion coprocessor counts steps in the background — no battery drain.",
-              },
-              {
-                icon: '🔄',
-                title: 'Auto sync',
-                desc: 'Steps sync automatically when you open the app or return from background.',
-              },
-              {
-                icon: '☁️',
-                title: 'Cloud backup',
-                desc: 'Daily step counts are saved to your Nexara account for history and trends.',
-              },
-            ].map((item) => (
-              <View key={item.title} style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
-                <Text style={{ fontSize: 20 }}>{item.icon}</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#fff' }}>
-                    {item.title}
-                  </Text>
-                  <Text
-                    style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2, lineHeight: 17 }}
-                  >
-                    {item.desc}
-                  </Text>
-                </View>
+              {/* Goal line label */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
+                <View
+                  style={{ width: 12, height: 2, backgroundColor: '#10B981', borderRadius: 1 }}
+                />
+                <Text style={{ fontSize: 11, color: COLORS.textMuted }}>
+                  Green = goal reached ({goalSteps.toLocaleString()} steps)
+                </Text>
               </View>
-            ))}
-          </GlassCard>
+            </GlassCard>
+          </Animated.View>
+          {/* Goal setter */}
+          <Animated.View style={entranceStyle(ss3)}>
+            <GlassCard padding={16} style={{ marginBottom: 20 }}>
+              <Text
+                style={{ fontSize: 13, fontWeight: '700', color: COLORS.text, marginBottom: 14 }}
+              >
+                Daily Goal
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {[5000, 7500, 8000, 10000, 12000, 15000].map((g) => (
+                  <TouchableOpacity key={g} onPress={() => setGoal(g)}>
+                    {goalSteps === g ? (
+                      <LinearGradient
+                        colors={['#7C3AED', '#06B6D4']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={{
+                          borderRadius: RADIUS.full,
+                          paddingHorizontal: 16,
+                          paddingVertical: 8,
+                        }}
+                      >
+                        <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>
+                          {g.toLocaleString()}
+                        </Text>
+                      </LinearGradient>
+                    ) : (
+                      <View
+                        style={{
+                          borderRadius: RADIUS.full,
+                          paddingHorizontal: 16,
+                          paddingVertical: 8,
+                          backgroundColor: COLORS.bgCard,
+                          borderWidth: 1,
+                          borderColor: COLORS.border,
+                        }}
+                      >
+                        <Text style={{ color: COLORS.textSub, fontSize: 12 }}>
+                          {g.toLocaleString()}
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </GlassCard>
+
+            {/* Best day */}
+            {bestDay.steps > 0 && (
+              <GlassCard padding={16} style={{ marginBottom: 20 }}>
+                <Text
+                  style={{ fontSize: 13, fontWeight: '700', color: COLORS.text, marginBottom: 6 }}
+                >
+                  🏆 Best Day This Week
+                </Text>
+                <Text style={{ fontSize: 28, fontWeight: '900', color: '#A78BFA' }}>
+                  {bestDay.steps.toLocaleString()}
+                </Text>
+                <Text style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>
+                  {new Date(bestDay.date + 'T12:00:00').toLocaleDateString([], {
+                    weekday: 'long',
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </Text>
+              </GlassCard>
+            )}
+
+            {/* How it works */}
+            <GlassCard padding={16}>
+              <Text
+                style={{ fontSize: 13, fontWeight: '700', color: COLORS.text, marginBottom: 10 }}
+              >
+                How it works
+              </Text>
+              {[
+                {
+                  icon: '📱',
+                  title: 'Hardware counting',
+                  desc: "Your phone's motion coprocessor counts steps in the background — no battery drain.",
+                },
+                {
+                  icon: '🔄',
+                  title: 'Auto sync',
+                  desc: 'Steps sync automatically when you open the app or return from background.',
+                },
+                {
+                  icon: '☁️',
+                  title: 'Cloud backup',
+                  desc: 'Daily step counts are saved to your Nexara account for history and trends.',
+                },
+              ].map((item) => (
+                <View key={item.title} style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+                  <Text style={{ fontSize: 20 }}>{item.icon}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: COLORS.text }}>
+                      {item.title}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        color: COLORS.textMuted,
+                        marginTop: 2,
+                        lineHeight: 17,
+                      }}
+                    >
+                      {item.desc}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </GlassCard>
+          </Animated.View>
         </View>
       </ScrollView>
     </View>

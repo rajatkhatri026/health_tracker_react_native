@@ -1,14 +1,14 @@
-// Dark Premium Glassmorphism Theme
+// Light Premium Theme
 export const COLORS = {
   // Backgrounds
-  bg: '#0A0E27',
-  bgCard: 'rgba(255,255,255,0.07)',
-  bgCardHover: 'rgba(255,255,255,0.12)',
-  bgInput: 'rgba(255,255,255,0.06)',
+  bg: '#F4F5FA',
+  bgCard: '#FFFFFF',
+  bgCardHover: '#F9F9FF',
+  bgInput: '#F3F4F8',
 
   // Borders
-  border: 'rgba(255,255,255,0.12)',
-  borderLight: 'rgba(255,255,255,0.07)',
+  border: '#E4E7F0',
+  borderLight: '#EEF0F8',
 
   // Brand gradients
   gradPrimary: ['#7C3AED', '#06B6D4'] as const,
@@ -27,9 +27,18 @@ export const COLORS = {
   red: '#EF4444',
 
   // Text
-  text: '#FFFFFF',
-  textSub: 'rgba(255,255,255,0.6)',
-  textMuted: 'rgba(255,255,255,0.35)',
+  text: '#0F0F1A',
+  textSub: '#6B7280',
+  textMuted: '#9CA3AF',
+
+  // Tinted backgrounds (light tints for cards/badges)
+  tintPurple: '#EDE9FE',
+  tintCyan: '#ECFEFF',
+  tintGreen: '#D1FAE5',
+  tintAmber: '#FEF3C7',
+  tintPink: '#FCE7F3',
+  tintBlue: '#DBEAFE',
+  tintRed: '#FEE2E2',
 
   // Glow shadows
   glowPurple: '#7C3AED',
@@ -52,6 +61,11 @@ export const glassStyle = {
   borderWidth: 1,
   borderColor: COLORS.border,
   borderRadius: RADIUS.lg,
+  shadowColor: '#7C3AED',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.07,
+  shadowRadius: 16,
+  elevation: 4,
 };
 
 export const glowShadow = (color: string, intensity = 0.4) => ({

@@ -1,20 +1,33 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
-import type { ConfirmationResult, ApplicationVerifier } from 'firebase/auth';
-import { auth } from '../utils/firebase';
-import { signInWithPhoneNumber } from 'firebase/auth';
+import * as SecureStore from 'expo-secure-store';
 import type { User } from '../types';
-import { phoneAuth, getMe } from '../api/auth';
+import { otpSend, otpVerify, getMe } from '../api/auth';
+import { registerPushToken } from '../utils/registerPushToken';
+
+const setToken = (k: string, v: string) => SecureStore.setItemAsync(k, v);
+const getToken = (k: string) => SecureStore.getItemAsync(k);
+const delTokens = () =>
+  Promise.all([
+    SecureStore.deleteItemAsync('access_token'),
+    SecureStore.deleteItemAsync('refresh_token'),
+  ]);
+
+interface AuthState {
+  user: User | null;
+  onboardingDone: boolean;
+  isNewUser: boolean;
+}
 
 interface AuthContextValue {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   onboardingDone: boolean;
+  isNewUser: boolean;
   completeOnboarding: () => Promise<void>;
-  sendOtp: (phone: string, recaptchaContainer: string) => Promise<void>;
-  verifyOtp: (otp: string) => Promise<{ isNewUser: boolean }>;
+  sendOtp: (phone: string) => Promise<{ devOtp?: string }>;
+  verifyOtp: (phone: string, otp: string) => Promise<{ isNewUser: boolean }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -22,25 +35,26 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [authState, setAuthState] = useState<AuthState>({
+    user: null,
+    onboardingDone: false,
+    isNewUser: false,
+  });
   const [isLoading, setIsLoading] = useState(true);
-  const [onboardingDone, setOnboardingDone] = useState(false);
-
-  const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null);
 
   const loadUser = useCallback(async () => {
-    const token = await AsyncStorage.getItem('access_token');
+    const token = await getToken('access_token');
     if (!token) {
       setIsLoading(false);
       return;
     }
     try {
       const me = await getMe();
-      setUser(me);
       const done = await AsyncStorage.getItem(`onboarding_complete_${me.user_id}`);
-      setOnboardingDone(!!done);
+      setAuthState({ user: me, onboardingDone: !!done, isNewUser: false });
+      registerPushToken(me.user_id); // refresh token on every app launch
     } catch {
-      await AsyncStorage.multiRemove(['access_token', 'refresh_token']);
+      await delTokens();
     } finally {
       setIsLoading(false);
     }
@@ -50,92 +64,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loadUser();
   }, [loadUser]);
 
-  const recaptchaRef = React.useRef<unknown>(null);
-
-  const sendOtp = async (phone: string, recaptchaContainerId: string) => {
-    if (!auth) throw new Error('Firebase auth not initialized');
-
-    if (Platform.OS === 'web') {
-      // Web needs a RecaptchaVerifier
-      let verifier = recaptchaRef.current as ApplicationVerifier | null;
-      if (!verifier) {
-        const { RecaptchaVerifier } = await import('firebase/auth');
-        const rv = new RecaptchaVerifier(auth, recaptchaContainerId, {
-          size: 'invisible',
-          callback: () => {},
-          'expired-callback': () => {
-            try {
-              (recaptchaRef.current as { clear: () => void })?.clear();
-            } catch {}
-            recaptchaRef.current = null;
-          },
-        });
-        await rv.render();
-        recaptchaRef.current = rv;
-        verifier = rv;
-      }
-      const result = await signInWithPhoneNumber(auth, phone, verifier);
-      setConfirmation(result);
-    } else {
-      // Native: provide a dummy verifier — Firebase JS SDK requires the
-      // argument to be present but with appVerificationDisabledForTesting=true
-      // it won't actually invoke it for whitelisted test numbers.
-      const dummyVerifier = {
-        type: 'recaptcha',
-        verify: () => Promise.resolve('test-token'),
-        _reset: () => {},
-      } as unknown as ApplicationVerifier;
-      const result = await signInWithPhoneNumber(auth, phone, dummyVerifier);
-      setConfirmation(result);
-    }
+  const sendOtp = async (phone: string): Promise<{ devOtp?: string }> => {
+    const res = await otpSend(phone);
+    return { devOtp: res.dev_otp };
   };
 
-  const verifyOtp = async (otp: string): Promise<{ isNewUser: boolean }> => {
-    let idToken: string;
-
-    if (!confirmation) throw new Error('No OTP sent');
-    const credential = await confirmation.confirm(otp);
-    idToken = await credential.user.getIdToken();
-
-    const tokens = await phoneAuth(idToken);
-    await AsyncStorage.setItem('access_token', tokens.access_token);
-    await AsyncStorage.setItem('refresh_token', tokens.refresh_token);
+  const verifyOtp = async (phone: string, otp: string): Promise<{ isNewUser: boolean }> => {
+    const tokens = await otpVerify(phone, otp);
+    await setToken('access_token', tokens.access_token);
+    await setToken('refresh_token', tokens.refresh_token);
     const me = await getMe();
-
-    setUser(me);
     const done = await AsyncStorage.getItem(`onboarding_complete_${me.user_id}`);
-
-    setOnboardingDone(!!done);
+    // Single setState so navigator never sees an intermediate state where
+    // isAuthenticated=true but onboardingDone=false for an existing user.
+    setAuthState({ user: me, onboardingDone: !!done, isNewUser: tokens.is_new_user });
+    registerPushToken(me.user_id); // fire-and-forget — never blocks login
     return { isNewUser: tokens.is_new_user };
   };
 
   const refreshUser = async () => {
     try {
       const me = await getMe();
-      setUser(me);
-    } catch {}
-  };
-
-  const completeOnboarding = async () => {
-    if (user) {
-      await AsyncStorage.setItem(`onboarding_complete_${user.user_id}`, 'true');
-      setOnboardingDone(true);
+      setAuthState((prev) => ({ ...prev, user: me }));
+    } catch {
+      // Network error — keep existing user in state, don't disrupt UI
     }
   };
 
+  const completeOnboarding = async () => {
+    if (!authState.user) return;
+    try {
+      await AsyncStorage.setItem(`onboarding_complete_${authState.user.user_id}`, 'true');
+    } catch {
+      // Storage failure — still update in-memory state so user can proceed
+    }
+    setAuthState((prev) => ({ ...prev, onboardingDone: true }));
+  };
+
   const logout = async () => {
-    await AsyncStorage.multiRemove(['access_token', 'refresh_token']);
-    setUser(null);
-    setOnboardingDone(false);
+    try {
+      await delTokens();
+    } catch {
+      // SecureStore failure — still clear in-memory state so user is logged out
+    }
+    setAuthState({ user: null, onboardingDone: false, isNewUser: false });
   };
 
   return (
     <AuthContext.Provider
       value={{
-        user,
-        isAuthenticated: !!user,
+        user: authState.user,
+        isAuthenticated: !!authState.user,
         isLoading,
-        onboardingDone,
+        onboardingDone: authState.onboardingDone,
+        isNewUser: authState.isNewUser,
         completeOnboarding,
         sendOtp,
         verifyOtp,

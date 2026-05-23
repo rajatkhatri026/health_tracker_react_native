@@ -6,8 +6,11 @@ import {
   TouchableOpacity,
   Modal,
   TouchableWithoutFeedback,
-  ActivityIndicator,
+  Animated,
+  Alert,
+  StatusBar,
 } from 'react-native';
+import { useEntranceAnimation, entranceStyle } from '../../hooks/useEntranceAnimation';
 import { useAuth } from '../../context/AuthContext';
 import { getGoals, createGoal, deleteGoal } from '../../api/goals';
 import type { Goal, MetricType, GoalRecurrence, CreateGoalPayload } from '../../types';
@@ -16,6 +19,7 @@ import GoalCard from '../../components/GoalCard/GoalCard';
 import Button from '../../components/Button/Button';
 import Input from '../../components/Input/Input';
 import { styles } from './Goals.styles';
+import { GoalsSkeleton } from '../../components/Skeleton/Skeleton';
 
 const METRIC_TYPES: MetricType[] = [
   'weight',
@@ -30,6 +34,7 @@ const RECURRENCES: GoalRecurrence[] = ['none', 'daily', 'weekly', 'monthly'];
 
 const GoalsScreen: React.FC = () => {
   const { user } = useAuth();
+  const [gs0, gs1, gs2] = useEntranceAnimation(3, { initialDelay: 60, stagger: 110 });
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -48,6 +53,7 @@ const GoalsScreen: React.FC = () => {
       const data = await getGoals(user.user_id);
       setGoals(data);
     } catch {
+      Alert.alert('Error', 'Failed to load goals. Pull down to retry.');
     } finally {
       setLoading(false);
     }
@@ -62,7 +68,9 @@ const GoalsScreen: React.FC = () => {
     try {
       await deleteGoal(user.user_id, goalId);
       setGoals((prev) => prev.filter((g) => g.goal_id !== goalId));
-    } catch {}
+    } catch {
+      Alert.alert('Error', 'Failed to delete goal. Please try again.');
+    }
   };
 
   const handleCreate = async () => {
@@ -101,63 +109,77 @@ const GoalsScreen: React.FC = () => {
   const completed = goals.filter((g) => g.status === 'completed');
   const paused = goals.filter((g) => g.status === 'paused');
 
+  if (loading) {
+    return <GoalsSkeleton />;
+  }
+
   return (
     <View style={styles.page}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Goals 🎯</Text>
-        <Text style={styles.subtitle}>Set and track your health goals</Text>
-      </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.statsRow}>
-          {[
-            { label: 'ACTIVE', val: active.length, icon: '🎯', bg: '#EEF0FF' },
-            { label: 'DONE', val: completed.length, icon: '✅', bg: '#F0FFF8' },
-            { label: 'TOTAL', val: goals.length, icon: '📊', bg: '#FFF8EE' },
-          ].map((s) => (
-            <View key={s.label} style={styles.statCard}>
-              <View style={[styles.statIconBg, { backgroundColor: s.bg }]}>
-                <Text style={{ fontSize: 18 }}>{s.icon}</Text>
-              </View>
-              <Text style={styles.statValue}>{s.val}</Text>
-              <Text style={styles.statLabel}>{s.label}</Text>
-            </View>
-          ))}
+      <StatusBar barStyle="dark-content" />
+      <Animated.View style={entranceStyle(gs0)}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Goals 🎯</Text>
+          <Text style={styles.subtitle}>Set and track your health goals</Text>
         </View>
+      </Animated.View>
 
-        {loading ? (
-          <ActivityIndicator color="#92A3FD" style={{ padding: 20 }} />
-        ) : goals.length === 0 ? (
-          <Text style={styles.emptyState}>No goals yet. Tap + to create your first goal!</Text>
-        ) : (
-          <>
-            {active.length > 0 && (
-              <>
-                <Text style={styles.sectionTitle}>Active Goals</Text>
-                {active.map((g) => (
-                  <GoalCard key={g.goal_id} goal={g} onDelete={handleDelete} />
-                ))}
-              </>
-            )}
-            {completed.length > 0 && (
-              <>
-                <Text style={styles.sectionTitle}>Completed</Text>
-                {completed.map((g) => (
-                  <GoalCard key={g.goal_id} goal={g} onDelete={handleDelete} />
-                ))}
-              </>
-            )}
-            {paused.length > 0 && (
-              <>
-                <Text style={styles.sectionTitle}>Paused</Text>
-                {paused.map((g) => (
-                  <GoalCard key={g.goal_id} goal={g} onDelete={handleDelete} />
-                ))}
-              </>
-            )}
-          </>
-        )}
-        <View style={{ height: 100 }} />
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        automaticallyAdjustContentInsets={false}
+        contentInsetAdjustmentBehavior="never"
+        keyboardShouldPersistTaps="handled"
+      >
+        <Animated.View style={entranceStyle(gs1)}>
+          <View style={styles.statsRow}>
+            {[
+              { label: 'ACTIVE', val: active.length, icon: '🎯', bg: '#EEF0FF' },
+              { label: 'DONE', val: completed.length, icon: '✅', bg: '#F0FFF8' },
+              { label: 'TOTAL', val: goals.length, icon: '📊', bg: '#FFF8EE' },
+            ].map((s) => (
+              <View key={s.label} style={styles.statCard}>
+                <View style={[styles.statIconBg, { backgroundColor: s.bg }]}>
+                  <Text style={{ fontSize: 18 }}>{s.icon}</Text>
+                </View>
+                <Text style={styles.statValue}>{s.val}</Text>
+                <Text style={styles.statLabel}>{s.label}</Text>
+              </View>
+            ))}
+          </View>
+        </Animated.View>
+        <Animated.View style={entranceStyle(gs2)}>
+          {goals.length === 0 ? (
+            <Text style={styles.emptyState}>No goals yet. Tap + to create your first goal!</Text>
+          ) : (
+            <>
+              {active.length > 0 && (
+                <>
+                  <Text style={styles.sectionTitle}>Active Goals</Text>
+                  {active.map((g) => (
+                    <GoalCard key={g.goal_id} goal={g} onDelete={handleDelete} />
+                  ))}
+                </>
+              )}
+              {completed.length > 0 && (
+                <>
+                  <Text style={styles.sectionTitle}>Completed</Text>
+                  {completed.map((g) => (
+                    <GoalCard key={g.goal_id} goal={g} onDelete={handleDelete} />
+                  ))}
+                </>
+              )}
+              {paused.length > 0 && (
+                <>
+                  <Text style={styles.sectionTitle}>Paused</Text>
+                  {paused.map((g) => (
+                    <GoalCard key={g.goal_id} goal={g} onDelete={handleDelete} />
+                  ))}
+                </>
+              )}
+            </>
+          )}
+          <View style={{ height: 100 }} />
+        </Animated.View>
       </ScrollView>
 
       <TouchableOpacity style={styles.fab} onPress={() => setShowCreate(true)}>

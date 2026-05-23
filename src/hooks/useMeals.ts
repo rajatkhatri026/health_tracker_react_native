@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getMeals, addMeal, deleteMeal, seedDefaultMeals, type MealEntry } from '../api/local';
+import { localDateString } from '../utils/format';
 
 interface MacroTotals {
   calories: number;
@@ -12,6 +13,7 @@ interface MacroTotals {
 interface UseMealsResult {
   meals: MealEntry[];
   loading: boolean;
+  error: string | null;
   refresh: () => Promise<void>;
   add: (payload: Omit<MealEntry, 'id' | 'loggedAt'>) => Promise<void>;
   remove: (id: string) => Promise<void>;
@@ -29,15 +31,25 @@ const today = () => {
 export const useMeals = (): UseMealsResult => {
   const { user } = useAuth();
   const [meals, setMeals] = useState<MealEntry[]>([]);
+  const [allMeals, setAllMeals] = useState<MealEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetch = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    await seedDefaultMeals(user.user_id);
-    const data = await getMeals(user.user_id, today());
-    setMeals(data);
-    setLoading(false);
+    setError(null);
+    try {
+      await seedDefaultMeals(user.user_id);
+      const todayData = await getMeals(user.user_id, today());
+      const allData = await getMeals(user.user_id);
+      setMeals(todayData);
+      setAllMeals(allData);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load meals');
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
 
   useEffect(() => {
@@ -45,19 +57,33 @@ export const useMeals = (): UseMealsResult => {
   }, [fetch]);
 
   const add = useCallback(
-    async (payload: Omit<MealEntry, 'id' | 'loggedAt'>) => {
+    async (payload: Omit<MealEntry, 'id' | 'loggedAt'>): Promise<void> => {
       if (!user) return;
-      await addMeal(user.user_id, payload);
-      await fetch();
+      try {
+        const entry = await addMeal(user.user_id, payload);
+        // Optimistic — prepend to state without full re-fetch
+        setMeals((prev) => [entry, ...prev]);
+        setAllMeals((prev) => [entry, ...prev]);
+      } catch (e) {
+        throw e instanceof Error ? e : new Error('Failed to add meal');
+      }
     },
-    [user, fetch]
+    [user]
   );
 
   const remove = useCallback(
-    async (id: string) => {
+    async (id: string): Promise<void> => {
       if (!user) return;
-      await deleteMeal(user.user_id, id);
-      await fetch();
+      // Optimistic — remove from state immediately, no scroll reset
+      setMeals((prev) => prev.filter((m) => m.id !== id));
+      setAllMeals((prev) => prev.filter((m) => m.id !== id));
+      try {
+        await deleteMeal(user.user_id, id);
+      } catch (e) {
+        // Rollback on failure
+        await fetch();
+        throw e instanceof Error ? e : new Error('Failed to delete meal');
+      }
     },
     [user, fetch]
   );
@@ -78,10 +104,17 @@ export const useMeals = (): UseMealsResult => {
     [meals]
   );
 
-  // placeholder weekly — returns today's totals for the current day bucket, 0 for past
-  const weeklyCalories: number[] = Array(7)
-    .fill(0)
-    .map((_, i) => (i === 6 ? totals.calories : 0));
+  // Real 7-day calorie history — Sun=0 … Sat=6 matching DAYS_SHORT in screen
+  const weeklyCalories: number[] = (() => {
+    const buckets = Array(7).fill(0);
+    for (const m of allMeals) {
+      const dateStr = m.loggedAt.slice(0, 10); // YYYY-MM-DD
+      const d = new Date(dateStr + 'T12:00:00'); // noon to avoid DST edge
+      const dayOfWeek = d.getDay(); // 0=Sun … 6=Sat
+      buckets[dayOfWeek] += m.calories;
+    }
+    return buckets;
+  })();
 
-  return { meals, loading, refresh: fetch, add, remove, totals, byCategory, weeklyCalories };
+  return { meals, loading, error, refresh: fetch, add, remove, totals, byCategory, weeklyCalories };
 };

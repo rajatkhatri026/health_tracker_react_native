@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Animated, Alert, StatusBar } from 'react-native';
+import { useEntranceAnimation, entranceStyle } from '../../hooks/useEntranceAnimation';
 import { useAuth } from '../../context/AuthContext';
 import { getMetrics, createMetric, deleteMetric } from '../../api/metrics';
 import type { Metric, MetricType, CreateMetricPayload } from '../../types';
@@ -7,6 +8,7 @@ import { metricIcon, metricLabel, metricUnit, formatDateTime } from '../../utils
 import QuickAdd from '../../components/QuickAdd/QuickAdd';
 import MetricChart from '../../components/MetricChart/MetricChart';
 import { styles } from './Metrics.styles';
+import { MetricsSkeleton } from '../../components/Skeleton/Skeleton';
 
 const FILTER_TYPES: MetricType[] = [
   'weight',
@@ -20,6 +22,7 @@ const FILTER_TYPES: MetricType[] = [
 
 const MetricsScreen: React.FC = () => {
   const { user } = useAuth();
+  const [ms0, ms1, ms2] = useEntranceAnimation(3, { initialDelay: 60, stagger: 110 });
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [activeFilter, setActiveFilter] = useState<MetricType | 'all'>('all');
   const [loading, setLoading] = useState(true);
@@ -34,6 +37,7 @@ const MetricsScreen: React.FC = () => {
       });
       setMetrics(data);
     } catch {
+      Alert.alert('Error', 'Failed to load metrics. Pull down to retry.');
     } finally {
       setLoading(false);
     }
@@ -48,13 +52,19 @@ const MetricsScreen: React.FC = () => {
     try {
       await deleteMetric(user.user_id, metricId);
       setMetrics((prev) => prev.filter((m) => m.metric_id !== metricId));
-    } catch {}
+    } catch {
+      Alert.alert('Error', 'Failed to delete metric. Please try again.');
+    }
   };
 
   const handleQuickAdd = async (payload: CreateMetricPayload) => {
     if (!user) return;
-    await createMetric(user.user_id, payload);
-    await loadMetrics();
+    try {
+      await createMetric(user.user_id, payload);
+      await loadMetrics();
+    } catch {
+      Alert.alert('Error', 'Failed to save metric. Please try again.');
+    }
   };
 
   const sorted = [...metrics].sort(
@@ -73,88 +83,108 @@ const MetricsScreen: React.FC = () => {
 
   const latestValue = sorted.find((m) => m.type === displayType);
 
+  if (loading) {
+    return <MetricsSkeleton />;
+  }
+
   return (
     <View style={styles.page}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Metrics</Text>
-        <Text style={styles.subtitle}>Track your health data</Text>
-      </View>
+      <StatusBar barStyle="dark-content" />
+      <Animated.View style={entranceStyle(ms0)}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Metrics</Text>
+          <Text style={styles.subtitle}>Track your health data</Text>
+        </View>
+      </Animated.View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
-          <TouchableOpacity
-            style={[styles.filterChip, activeFilter === 'all' && styles.filterChipActive]}
-            onPress={() => setActiveFilter('all')}
-          >
-            <Text
-              style={[styles.filterChipText, activeFilter === 'all' && styles.filterChipTextActive]}
-            >
-              All
-            </Text>
-          </TouchableOpacity>
-          {FILTER_TYPES.map((type) => (
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        automaticallyAdjustContentInsets={false}
+        contentInsetAdjustmentBehavior="never"
+        keyboardShouldPersistTaps="handled"
+      >
+        <Animated.View style={entranceStyle(ms1)}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
             <TouchableOpacity
-              key={type}
-              style={[styles.filterChip, activeFilter === type && styles.filterChipActive]}
-              onPress={() => setActiveFilter(type)}
+              style={[styles.filterChip, activeFilter === 'all' && styles.filterChipActive]}
+              onPress={() => setActiveFilter('all')}
             >
               <Text
                 style={[
                   styles.filterChipText,
-                  activeFilter === type && styles.filterChipTextActive,
+                  activeFilter === 'all' && styles.filterChipTextActive,
                 ]}
               >
-                {metricIcon[type]} {metricLabel[type]}
+                All
               </Text>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {chartData.length > 1 && (
-          <View style={styles.chartCard}>
-            <View style={styles.chartHeader}>
-              <Text style={styles.chartTitle}>
-                {metricIcon[displayType]} {metricLabel[displayType]} Trend
-              </Text>
-              {latestValue && (
-                <Text style={styles.chartLatest}>
-                  {latestValue.value}{' '}
-                  <Text style={styles.chartUnit}>{metricUnit[displayType]}</Text>
+            {FILTER_TYPES.map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={[styles.filterChip, activeFilter === type && styles.filterChipActive]}
+                onPress={() => setActiveFilter(type)}
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    activeFilter === type && styles.filterChipTextActive,
+                  ]}
+                >
+                  {metricIcon[type]} {metricLabel[type]}
                 </Text>
-              )}
-            </View>
-            <MetricChart data={chartData} color="#C58BF2" unit={metricUnit[displayType]} />
-          </View>
-        )}
-
-        <Text style={styles.listTitle}>History</Text>
-        {loading ? (
-          <ActivityIndicator color="#92A3FD" style={{ padding: 20 }} />
-        ) : sorted.length === 0 ? (
-          <Text style={styles.emptyState}>No metrics yet. Tap + to add your first entry!</Text>
-        ) : (
-          sorted.map((m) => (
-            <View key={m.metric_id} style={styles.metricItem}>
-              <View style={styles.metricIconBg}>
-                <Text style={styles.metricIcon}>{metricIcon[m.type]}</Text>
-              </View>
-              <View style={styles.metricInfo}>
-                <Text style={styles.metricType}>{metricLabel[m.type]}</Text>
-                <Text style={styles.metricTime}>
-                  {formatDateTime(m.timestamp)} · {m.source}
-                </Text>
-              </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.metricValue}>{m.value}</Text>
-                <Text style={styles.metricUnit}>{m.unit}</Text>
-              </View>
-              <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(m.metric_id)}>
-                <Text style={styles.deleteBtnText}>✕</Text>
               </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {chartData.length > 1 && (
+            <View style={styles.chartCard}>
+              <View style={styles.chartHeader}>
+                <Text style={styles.chartTitle}>
+                  {metricIcon[displayType]} {metricLabel[displayType]} Trend
+                </Text>
+                {latestValue && (
+                  <Text style={styles.chartLatest}>
+                    {latestValue.value}{' '}
+                    <Text style={styles.chartUnit}>{metricUnit[displayType]}</Text>
+                  </Text>
+                )}
+              </View>
+              <MetricChart data={chartData} color="#C58BF2" unit={metricUnit[displayType]} />
             </View>
-          ))
-        )}
-        <View style={{ height: 100 }} />
+          )}
+        </Animated.View>
+        <Animated.View style={entranceStyle(ms2)}>
+          <Text style={styles.listTitle}>History</Text>
+          {sorted.length === 0 ? (
+            <Text style={styles.emptyState}>No metrics yet. Tap + to add your first entry!</Text>
+          ) : (
+            sorted.map((m) => (
+              <View key={m.metric_id} style={styles.metricItem}>
+                <View style={styles.metricIconBg}>
+                  <Text style={styles.metricIcon}>{metricIcon[m.type]}</Text>
+                </View>
+                <View style={styles.metricInfo}>
+                  <Text style={styles.metricType}>{metricLabel[m.type]}</Text>
+                  <Text style={styles.metricTime}>
+                    {formatDateTime(m.timestamp)} · {m.source}
+                  </Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={styles.metricValue}>{m.value}</Text>
+                  <Text style={styles.metricUnit}>{m.unit}</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.deleteBtn}
+                  onPress={() => handleDelete(m.metric_id)}
+                >
+                  <Text style={styles.deleteBtnText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
+          <View style={{ height: 100 }} />
+        </Animated.View>
       </ScrollView>
 
       <TouchableOpacity style={styles.fab} onPress={() => setShowQuickAdd(true)}>

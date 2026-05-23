@@ -7,9 +7,14 @@ import {
   FlatList,
   TextInput,
   TouchableWithoutFeedback,
+  Dimensions,
 } from 'react-native';
 import { COUNTRY_CODES, type CountryCode } from '../../utils/countryCodes';
 import { styles } from './CountryPicker.styles';
+
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+// Fixed list height: screen height minus sheet chrome (handle+title+search+padding) and keyboard room
+const LIST_HEIGHT = SCREEN_HEIGHT * 0.45;
 
 interface Props {
   selected: CountryCode;
@@ -30,6 +35,11 @@ const CountryPicker: React.FC<Props> = ({ selected, onSelect }) => {
     setSearch('');
   };
 
+  const handleClose = () => {
+    setVisible(false);
+    setSearch('');
+  };
+
   return (
     <>
       <TouchableOpacity style={styles.trigger} onPress={() => setVisible(true)} activeOpacity={0.7}>
@@ -42,9 +52,10 @@ const CountryPicker: React.FC<Props> = ({ selected, onSelect }) => {
         visible={visible}
         transparent
         animationType="slide"
-        onRequestClose={() => setVisible(false)}
+        onRequestClose={handleClose}
+        statusBarTranslucent
       >
-        <TouchableWithoutFeedback onPress={() => setVisible(false)}>
+        <TouchableWithoutFeedback onPress={handleClose}>
           <View style={styles.overlay}>
             <TouchableWithoutFeedback>
               <View style={styles.sheet}>
@@ -57,6 +68,7 @@ const CountryPicker: React.FC<Props> = ({ selected, onSelect }) => {
                   value={search}
                   onChangeText={setSearch}
                   autoFocus
+                  returnKeyType="search"
                 />
                 <FlatList
                   data={filtered}
@@ -70,6 +82,7 @@ const CountryPicker: React.FC<Props> = ({ selected, onSelect }) => {
                   )}
                   keyboardShouldPersistTaps="handled"
                   showsVerticalScrollIndicator={false}
+                  style={{ height: LIST_HEIGHT }}
                 />
               </View>
             </TouchableWithoutFeedback>

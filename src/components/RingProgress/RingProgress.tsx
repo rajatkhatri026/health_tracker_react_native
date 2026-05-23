@@ -18,7 +18,7 @@ const RingProgress: React.FC<Props> = ({
   strokeWidth = 14,
   progress,
   gradientColors = ['#7C3AED', '#06B6D4'],
-  trackColor = 'rgba(255,255,255,0.08)',
+  trackColor = '#E8ECF4',
   label,
   sublabel,
   centerContent,
@@ -62,17 +62,24 @@ const RingProgress: React.FC<Props> = ({
         {centerContent ?? (
           <>
             {label && (
-              <Text style={{ color: '#fff', fontSize: 26, fontWeight: '800', letterSpacing: -0.5 }}>
+              <Text
+                style={{
+                  color: '#0F0F1A',
+                  fontSize: size < 100 ? 18 : size < 140 ? 22 : 26,
+                  fontWeight: '900',
+                  letterSpacing: -0.5,
+                }}
+              >
                 {label}
               </Text>
             )}
             {sublabel && (
               <Text
                 style={{
-                  color: 'rgba(255,255,255,0.55)',
-                  fontSize: 12,
-                  fontWeight: '500',
-                  marginTop: 2,
+                  color: '#9CA3AF',
+                  fontSize: size < 100 ? 10 : 12,
+                  fontWeight: '600',
+                  marginTop: 1,
                 }}
               >
                 {sublabel}

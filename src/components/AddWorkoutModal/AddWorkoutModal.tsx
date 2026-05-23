@@ -284,7 +284,7 @@ const AddWorkoutModal: React.FC<Props> = ({ visible, onClose, onSave, workout })
           >
             <IconArrowLeft size={20} color={COLORS.textSub} />
           </TouchableOpacity>
-          <Text style={{ flex: 1, fontSize: 17, fontWeight: '700', color: '#fff' }}>
+          <Text style={{ flex: 1, fontSize: 17, fontWeight: '700', color: COLORS.text }}>
             {step === 'category'
               ? 'Choose Category'
               : isEdit
@@ -312,15 +312,15 @@ const AddWorkoutModal: React.FC<Props> = ({ visible, onClose, onSave, workout })
         {error ? (
           <View
             style={{
-              backgroundColor: 'rgba(239,68,68,0.12)',
+              backgroundColor: '#FEF2F2',
               borderWidth: 1,
-              borderColor: 'rgba(239,68,68,0.3)',
+              borderColor: '#FECACA',
               margin: 16,
               borderRadius: RADIUS.sm,
               padding: 12,
             }}
           >
-            <Text style={{ color: '#FCA5A5', fontSize: 13 }}>{error}</Text>
+            <Text style={{ color: '#EF4444', fontSize: 13 }}>{error}</Text>
           </View>
         ) : null}
 
@@ -350,7 +350,7 @@ const AddWorkoutModal: React.FC<Props> = ({ visible, onClose, onSave, workout })
                 >
                   <Text style={{ fontSize: 36 }}>{cat.emoji}</Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.text }}>
                       {cat.label}
                     </Text>
                     <Text style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>
@@ -384,13 +384,13 @@ const AddWorkoutModal: React.FC<Props> = ({ visible, onClose, onSave, workout })
             </Text>
             <TextInput
               style={{
-                backgroundColor: COLORS.bgInput,
-                borderWidth: 1,
+                backgroundColor: COLORS.bgCard,
+                borderWidth: 1.5,
                 borderColor: COLORS.border,
                 borderRadius: RADIUS.md,
                 paddingHorizontal: 16,
                 height: 50,
-                color: '#fff',
+                color: COLORS.text,
                 fontSize: 15,
                 marginBottom: 20,
               }}
@@ -414,13 +414,13 @@ const AddWorkoutModal: React.FC<Props> = ({ visible, onClose, onSave, workout })
             </Text>
             <TextInput
               style={{
-                backgroundColor: COLORS.bgInput,
-                borderWidth: 1,
+                backgroundColor: COLORS.bgCard,
+                borderWidth: 1.5,
                 borderColor: COLORS.border,
                 borderRadius: RADIUS.md,
                 paddingHorizontal: 16,
                 height: 50,
-                color: '#fff',
+                color: COLORS.text,
                 fontSize: 15,
                 marginBottom: 20,
               }}
@@ -448,8 +448,8 @@ const AddWorkoutModal: React.FC<Props> = ({ visible, onClose, onSave, workout })
                 onPress={() => setShowDatePicker(true)}
                 style={{
                   flex: 1,
-                  backgroundColor: COLORS.bgInput,
-                  borderWidth: 1,
+                  backgroundColor: COLORS.bgCard,
+                  borderWidth: 1.5,
                   borderColor: COLORS.border,
                   borderRadius: RADIUS.md,
                   height: 50,
@@ -457,7 +457,7 @@ const AddWorkoutModal: React.FC<Props> = ({ visible, onClose, onSave, workout })
                   justifyContent: 'center',
                 }}
               >
-                <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>
+                <Text style={{ color: COLORS.text, fontSize: 14, fontWeight: '600' }}>
                   📅{' '}
                   {scheduledDate.toLocaleDateString([], {
                     month: 'short',
@@ -472,8 +472,8 @@ const AddWorkoutModal: React.FC<Props> = ({ visible, onClose, onSave, workout })
                 onPress={() => setShowTimePicker(true)}
                 style={{
                   flex: 1,
-                  backgroundColor: COLORS.bgInput,
-                  borderWidth: 1,
+                  backgroundColor: COLORS.bgCard,
+                  borderWidth: 1.5,
                   borderColor: COLORS.border,
                   borderRadius: RADIUS.md,
                   height: 50,
@@ -481,7 +481,7 @@ const AddWorkoutModal: React.FC<Props> = ({ visible, onClose, onSave, workout })
                   justifyContent: 'center',
                 }}
               >
-                <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>
+                <Text style={{ color: COLORS.text, fontSize: 14, fontWeight: '600' }}>
                   🕐 {scheduledDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </Text>
               </TouchableOpacity>
@@ -630,14 +630,14 @@ const AddWorkoutModal: React.FC<Props> = ({ visible, onClose, onSave, workout })
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 6,
-                  backgroundColor: 'rgba(124,58,237,0.2)',
+                  backgroundColor: '#EDE9FE',
                   borderRadius: RADIUS.full,
                   paddingHorizontal: 12,
                   paddingVertical: 6,
                 }}
               >
-                <IconPlus size={13} color="#A78BFA" strokeWidth={2.5} />
-                <Text style={{ color: '#A78BFA', fontSize: 12, fontWeight: '600' }}>Add</Text>
+                <IconPlus size={13} color="#7C3AED" strokeWidth={2.5} />
+                <Text style={{ color: '#7C3AED', fontSize: 12, fontWeight: '600' }}>Add</Text>
               </TouchableOpacity>
             </View>
 
@@ -662,7 +662,7 @@ const AddWorkoutModal: React.FC<Props> = ({ visible, onClose, onSave, workout })
                   <TextInput
                     style={{
                       flex: 1,
-                      color: '#fff',
+                      color: COLORS.text,
                       fontSize: 14,
                       fontWeight: '600',
                       borderBottomWidth: 1,
@@ -701,13 +701,13 @@ const AddWorkoutModal: React.FC<Props> = ({ visible, onClose, onSave, workout })
                       </Text>
                       <TextInput
                         style={{
-                          backgroundColor: 'rgba(255,255,255,0.05)',
-                          borderWidth: 1,
+                          backgroundColor: COLORS.bgInput,
+                          borderWidth: 1.5,
                           borderColor: COLORS.border,
                           borderRadius: 8,
                           height: 36,
                           textAlign: 'center',
-                          color: '#fff',
+                          color: COLORS.text,
                           fontSize: 14,
                         }}
                         value={f.value}

@@ -101,7 +101,7 @@ const Stopwatch: React.FC<{
       style={{
         fontSize: 48,
         fontWeight: '800',
-        color: '#fff',
+        color: COLORS.text,
         letterSpacing: -1,
         fontVariant: ['tabular-nums'],
       }}
@@ -129,9 +129,13 @@ const WorkoutDetailScreen: React.FC = () => {
 
   // Persist timer start timestamp so it survives background/close
   const startTimer = useCallback(async () => {
-    const existing = await AsyncStorage.getItem(TIMER_KEY(currentWorkout.id));
-    if (!existing) {
-      await AsyncStorage.setItem(TIMER_KEY(currentWorkout.id), String(Date.now()));
+    try {
+      const existing = await AsyncStorage.getItem(TIMER_KEY(currentWorkout.id));
+      if (!existing) {
+        await AsyncStorage.setItem(TIMER_KEY(currentWorkout.id), String(Date.now()));
+      }
+    } catch {
+      // Timer persistence failed — still start the in-memory timer
     }
     setStarted(true);
   }, [currentWorkout.id]);
@@ -139,14 +143,20 @@ const WorkoutDetailScreen: React.FC = () => {
   const pauseTimer = useCallback(() => setStarted(false), []);
 
   const clearTimer = useCallback(async () => {
-    await AsyncStorage.removeItem(TIMER_KEY(currentWorkout.id));
+    try {
+      await AsyncStorage.removeItem(TIMER_KEY(currentWorkout.id));
+    } catch {
+      // Non-critical — timer key cleanup failed
+    }
   }, [currentWorkout.id]);
 
   // On mount, check if a timer was already running for this workout
   useEffect(() => {
-    AsyncStorage.getItem(TIMER_KEY(currentWorkout.id)).then((v) => {
-      if (v) setStarted(true);
-    });
+    AsyncStorage.getItem(TIMER_KEY(currentWorkout.id))
+      .then((v) => {
+        if (v) setStarted(true);
+      })
+      .catch(() => {});
   }, [currentWorkout.id]);
   const [finished, setFinished] = useState(false);
   const [elapsedSecs, setElapsedSecs] = useState(0);
@@ -157,17 +167,21 @@ const WorkoutDetailScreen: React.FC = () => {
 
   const handleEditSave = async (payloads: CreateWorkoutPayload[]) => {
     const payload = payloads[0]; // edit always has one
-    await update(currentWorkout.id, payload);
-    setCurrentWorkout((prev) => ({
-      ...prev,
-      name: payload.name,
-      category: payload.category,
-      emoji: payload.emoji ?? prev.emoji,
-      durationMins: payload.durationMins,
-      scheduledAt: payload.scheduledAt,
-      exercises: payload.exercises.map((e, i) => ({ ...e, id: String(i), completed: false })),
-    }));
-    setEditVisible(false);
+    try {
+      await update(currentWorkout.id, payload);
+      setCurrentWorkout((prev) => ({
+        ...prev,
+        name: payload.name,
+        category: payload.category,
+        emoji: payload.emoji ?? prev.emoji,
+        durationMins: payload.durationMins,
+        scheduledAt: payload.scheduledAt,
+        exercises: payload.exercises.map((e, i) => ({ ...e, id: String(i), completed: false })),
+      }));
+      setEditVisible(false);
+    } catch {
+      Alert.alert('Error', 'Failed to update workout. Please try again.');
+    }
   };
 
   const confirmAndDelete = async () => {
@@ -238,7 +252,7 @@ const WorkoutDetailScreen: React.FC = () => {
           paddingHorizontal: 30,
         }}
       >
-        <StatusBar barStyle="light-content" />
+        <StatusBar barStyle="dark-content" />
         <LinearGradient
           colors={['#7C3AED', '#06B6D4']}
           start={{ x: 0, y: 0 }}
@@ -263,7 +277,7 @@ const WorkoutDetailScreen: React.FC = () => {
           style={{
             fontSize: 28,
             fontWeight: '800',
-            color: '#fff',
+            color: COLORS.text,
             textAlign: 'center',
             marginBottom: 8,
           }}
@@ -311,11 +325,11 @@ const WorkoutDetailScreen: React.FC = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" />
 
       {/* Header */}
       <LinearGradient
-        colors={['#1A0A3C', '#0D1F3C']}
+        colors={['#F4F5FA', '#EEF0FF']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={{
@@ -328,10 +342,10 @@ const WorkoutDetailScreen: React.FC = () => {
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 14 }}>
-            <IconArrowLeft size={20} color="#fff" />
+            <IconArrowLeft size={20} color={COLORS.text} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff' }}>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: COLORS.text }}>
               {currentWorkout.emoji} {currentWorkout.name}
             </Text>
             <Text style={{ fontSize: 13, color: COLORS.textSub, marginTop: 2 }}>
@@ -394,7 +408,7 @@ const WorkoutDetailScreen: React.FC = () => {
         <View
           style={{
             height: 6,
-            backgroundColor: 'rgba(255,255,255,0.1)',
+            backgroundColor: COLORS.border,
             borderRadius: 99,
             overflow: 'hidden',
             marginBottom: 16,
@@ -508,15 +522,15 @@ const WorkoutDetailScreen: React.FC = () => {
         >
           <View
             style={{
-              backgroundColor: '#16103A',
+              backgroundColor: COLORS.bgCard,
               borderRadius: 20,
               padding: 24,
               width: '100%',
               borderWidth: 1,
-              borderColor: 'rgba(124,58,237,0.4)',
+              borderColor: COLORS.tintPurple,
             }}
           >
-            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800', marginBottom: 8 }}>
+            <Text style={{ color: COLORS.text, fontSize: 18, fontWeight: '800', marginBottom: 8 }}>
               Finish Workout?
             </Text>
             <Text style={{ color: COLORS.textSub, fontSize: 14, marginBottom: 24 }}>
@@ -590,15 +604,15 @@ const WorkoutDetailScreen: React.FC = () => {
         >
           <View
             style={{
-              backgroundColor: '#16103A',
+              backgroundColor: COLORS.bgCard,
               borderRadius: 20,
               padding: 24,
               width: '100%',
               borderWidth: 1,
-              borderColor: 'rgba(239,68,68,0.4)',
+              borderColor: COLORS.tintRed,
             }}
           >
-            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800', marginBottom: 8 }}>
+            <Text style={{ color: COLORS.text, fontSize: 18, fontWeight: '800', marginBottom: 8 }}>
               Delete Workout
             </Text>
             <Text style={{ color: COLORS.textSub, fontSize: 14, marginBottom: 24 }}>
@@ -641,6 +655,9 @@ const WorkoutDetailScreen: React.FC = () => {
       {/* Exercise list */}
       <ScrollView
         showsVerticalScrollIndicator={false}
+        automaticallyAdjustContentInsets={false}
+        contentInsetAdjustmentBehavior="never"
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
       >
         <Text
@@ -662,6 +679,7 @@ const WorkoutDetailScreen: React.FC = () => {
               alignItems: 'center',
               marginBottom: 10,
               opacity: ex.completed ? 0.65 : 1,
+              backgroundColor: ex.completed ? COLORS.tintGreen : undefined,
             }}
             padding={14}
             glow={ex.completed ? '#10B981' : undefined}
@@ -694,7 +712,7 @@ const WorkoutDetailScreen: React.FC = () => {
                 style={{
                   fontSize: 14,
                   fontWeight: '700',
-                  color: ex.completed ? COLORS.textSub : '#fff',
+                  color: ex.completed ? COLORS.textSub : COLORS.text,
                   textDecorationLine: ex.completed ? 'line-through' : 'none',
                 }}
               >

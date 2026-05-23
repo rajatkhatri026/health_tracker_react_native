@@ -1,12 +1,13 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import Svg, { Defs, LinearGradient, Stop, Circle, Path } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, Stop, Circle, Path, Text as SvgText } from 'react-native-svg';
 
 type Props = {
-  size?: number; // icon mark size
-  showText?: boolean; // show "Nexara" wordmark beside icon
+  size?: number;
+  showText?: boolean;
   textSize?: number;
-  variant?: 'full' | 'icon'; // full = icon + text, icon = icon only
+  variant?: 'full' | 'icon';
+  theme?: 'dark' | 'light'; // dark = white text (default), light = gradient SVG text
 };
 
 /**
@@ -22,6 +23,7 @@ const NexaraLogo: React.FC<Props> = ({
   showText = false,
   textSize,
   variant = 'icon',
+  theme = 'dark',
 }) => {
   const s = size;
   const cx = s / 2;
@@ -116,19 +118,45 @@ const NexaraLogo: React.FC<Props> = ({
       </Svg>
 
       {/* Wordmark */}
-      {(showText || variant === 'full') && (
-        <Text
-          style={{
-            fontSize,
-            fontWeight: '800',
-            color: '#FFFFFF',
-            letterSpacing: -0.5,
-            includeFontPadding: false,
-          }}
-        >
-          Nex<Text style={{ color: '#A78BFA' }}>ara</Text>
-        </Text>
-      )}
+      {(showText || variant === 'full') &&
+        (theme === 'light' ? (
+          // Gradient SVG text — visible on light backgrounds
+          <Svg
+            width={fontSize * 3.8}
+            height={fontSize * 1.4}
+            viewBox={`0 0 ${fontSize * 3.8} ${fontSize * 1.4}`}
+          >
+            <Defs>
+              <LinearGradient id="nx_wordmark" x1="0%" y1="0%" x2="100%" y2="0%">
+                <Stop offset="0%" stopColor="#7C3AED" />
+                <Stop offset="100%" stopColor="#0891B2" />
+              </LinearGradient>
+            </Defs>
+            <SvgText
+              x="0"
+              y={fontSize * 1.05}
+              fontSize={fontSize}
+              fontWeight="800"
+              fill="url(#nx_wordmark)"
+              letterSpacing={-0.5}
+            >
+              Nexara
+            </SvgText>
+          </Svg>
+        ) : (
+          // White text for dark backgrounds
+          <Text
+            style={{
+              fontSize,
+              fontWeight: '800',
+              color: '#FFFFFF',
+              letterSpacing: -0.5,
+              includeFontPadding: false,
+            }}
+          >
+            Nex<Text style={{ color: '#A78BFA' }}>ara</Text>
+          </Text>
+        ))}
     </View>
   );
 };

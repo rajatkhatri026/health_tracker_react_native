@@ -8,6 +8,21 @@ export const phoneAuth = async (
   return data;
 };
 
+export const otpSend = async (
+  phone: string
+): Promise<{ message: string; expires_in: number; dev_otp?: string }> => {
+  const { data } = await api.post('/auth/otp/send', { phone });
+  return data;
+};
+
+export const otpVerify = async (
+  phone: string,
+  code: string
+): Promise<AuthTokens & { is_new_user: boolean }> => {
+  const { data } = await api.post('/auth/otp/verify', { phone, code });
+  return data;
+};
+
 export const sendEmailVerification = async (): Promise<void> => {
   await api.post('/auth/send-verification');
 };

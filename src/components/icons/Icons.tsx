@@ -328,3 +328,141 @@ export const IconEdit = ({ size = 24, color = '#fff', strokeWidth = 2 }: IconPro
       <Path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
     </>
   );
+
+export const IconWater = ({ size = 24, color = '#fff', strokeWidth = 2 }: IconProps) =>
+  d(
+    size,
+    color,
+    strokeWidth,
+    <>
+      <Path d="M12 2C12 2 4 10 4 15a8 8 0 0016 0c0-5-8-13-8-13z" />
+    </>
+  );
+
+export const IconBed = ({ size = 24, color = '#fff', strokeWidth = 2 }: IconProps) =>
+  d(
+    size,
+    color,
+    strokeWidth,
+    <>
+      <Path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8" />
+      <Path d="M2 20h20" />
+      <Path d="M2 10V6a2 2 0 0 1 2-2h4" />
+      <Path d="M12 10V6" />
+      <Path d="M8 6h8a2 2 0 0 1 2 2v2H6V8a2 2 0 0 1 2-2z" />
+    </>
+  );
+
+export const IconStar = ({ size = 24, color = '#fff', strokeWidth = 2 }: IconProps) =>
+  d(
+    size,
+    color,
+    strokeWidth,
+    <>
+      <Path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+    </>
+  );
+
+export const IconChevronDown = ({ size = 24, color = '#fff', strokeWidth = 2 }: IconProps) =>
+  d(size, color, strokeWidth, <Path d="M6 9l6 6 6-6" />);
+
+export const IconChevronUp = ({ size = 24, color = '#fff', strokeWidth = 2 }: IconProps) =>
+  d(size, color, strokeWidth, <Path d="M18 15l-6-6-6 6" />);
+
+export const IconCalendar = ({ size = 24, color = '#fff', strokeWidth = 2 }: IconProps) =>
+  d(
+    size,
+    color,
+    strokeWidth,
+    <>
+      <Rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <Line x1="16" y1="2" x2="16" y2="6" />
+      <Line x1="8" y1="2" x2="8" y2="6" />
+      <Line x1="3" y1="10" x2="21" y2="10" />
+    </>
+  );
+
+export const IconShield = ({ size = 24, color = '#fff', strokeWidth = 2 }: IconProps) =>
+  d(size, color, strokeWidth, <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />);
+
+export const IconGlobe = ({ size = 24, color = '#fff', strokeWidth = 2 }: IconProps) =>
+  d(
+    size,
+    color,
+    strokeWidth,
+    <>
+      <Circle cx="12" cy="12" r="10" />
+      <Line x1="2" y1="12" x2="22" y2="12" />
+      <Path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20" />
+    </>
+  );
+
+export const IconInfo = ({ size = 24, color = '#fff', strokeWidth = 2 }: IconProps) =>
+  d(
+    size,
+    color,
+    strokeWidth,
+    <>
+      <Circle cx="12" cy="12" r="10" />
+      <Line x1="12" y1="8" x2="12" y2="12" />
+      <Line x1="12" y1="16" x2="12.01" y2="16" />
+    </>
+  );
+
+export const IconRuler = ({ size = 24, color = '#fff', strokeWidth = 2 }: IconProps) =>
+  d(
+    size,
+    color,
+    strokeWidth,
+    <>
+      <Path d="M21.3 8.7L15.3 2.7a1 1 0 00-1.4 0L2.7 13.9a1 1 0 000 1.4l6 6a1 1 0 001.4 0L21.3 10.1a1 1 0 000-1.4z" />
+      <Line x1="7.5" y1="10.5" x2="9" y2="12" />
+      <Line x1="10.5" y1="7.5" x2="12" y2="9" />
+      <Line x1="13.5" y1="4.5" x2="15" y2="6" />
+    </>
+  );
+
+export const IconWeight = ({ size = 24, color = '#fff', strokeWidth = 2 }: IconProps) =>
+  d(
+    size,
+    color,
+    strokeWidth,
+    <>
+      <Path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+    </>
+  );
+
+export const IconX = ({ size = 24, color = '#fff', strokeWidth = 2 }: IconProps) =>
+  d(
+    size,
+    color,
+    strokeWidth,
+    <>
+      <Line x1="18" y1="6" x2="6" y2="18" />
+      <Line x1="6" y1="6" x2="18" y2="18" />
+    </>
+  );
+
+export const IconUtensils = ({ size = 24, color = '#fff', strokeWidth = 2 }: IconProps) =>
+  d(
+    size,
+    color,
+    strokeWidth,
+    <>
+      <Path d="M3 2v7c0 1.1.9 2 2 2h2a2 2 0 002-2V2" />
+      <Path d="M7 11v11" />
+      <Path d="M21 15V2a5 5 0 00-5 5v6h3v9" />
+    </>
+  );
+
+export const IconSparkle = ({ size = 24, color = '#fff', strokeWidth = 2 }: IconProps) =>
+  d(
+    size,
+    color,
+    strokeWidth,
+    <>
+      <Path d="M12 2L9.5 9.5L2 12L9.5 14.5L12 22L14.5 14.5L22 12L14.5 9.5L12 2Z" />
+      <Path d="M5 5L4 7L5 9L6 7L5 5Z" />
+      <Path d="M19 15L18 17L19 19L20 17L19 15Z" />
+    </>
+  );

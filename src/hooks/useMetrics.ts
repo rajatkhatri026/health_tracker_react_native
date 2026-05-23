@@ -78,15 +78,19 @@ export const useMetrics = (options: UseMetricsOptions = {}): UseMetricsResult =>
   );
 
   const addMetric = useCallback(
-    async (payload: Omit<CreateMetricPayload, 'timestamp' | 'source'>) => {
+    async (payload: Omit<CreateMetricPayload, 'timestamp' | 'source'>): Promise<void> => {
       if (!user) return;
-      const full: CreateMetricPayload = {
-        ...payload,
-        timestamp: toUTCISOString(new Date()),
-        source: 'manual',
-      };
-      await createMetric(user.user_id, full);
-      await fetch();
+      try {
+        const full: CreateMetricPayload = {
+          ...payload,
+          timestamp: toUTCISOString(new Date()),
+          source: 'manual',
+        };
+        await createMetric(user.user_id, full);
+        await fetch();
+      } catch (e) {
+        throw e instanceof Error ? e : new Error('Failed to save metric');
+      }
     },
     [user, fetch]
   );

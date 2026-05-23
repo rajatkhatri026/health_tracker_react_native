@@ -5,7 +5,8 @@ export type MetricType =
   | 'steps'
   | 'sleep'
   | 'nutrition'
-  | 'activity';
+  | 'activity'
+  | 'calories_burned';
 
 export type GoalStatus = 'active' | 'completed' | 'paused';
 export type GoalRecurrence = 'daily' | 'weekly' | 'monthly' | 'none';
@@ -27,6 +28,7 @@ export interface UserProfile {
   baseline_weight?: number;
   blood_type?: string;
   medical_notes?: string;
+  avatar_url?: string | null;
 }
 
 export interface Metric {

@@ -4,6 +4,7 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { toUTCISOString, localDateString } from '../utils/format';
+import { encryptLocalJSON, decryptLocalJSON } from '../utils/localCrypto';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,6 +37,10 @@ export interface SleepSchedule {
   time: string; // "HH:MM" 24h
   label: string;
   enabled: boolean;
+  days: number[]; // 0=Sun … 6=Sat, empty = every day
+  repeat: boolean;
+  vibrate: boolean;
+  snoozeMin: number;
 }
 
 export interface SleepEntry {
@@ -52,12 +57,31 @@ export interface SleepEntry {
 const key = (userId: string, namespace: string) => `${namespace}_${userId}`;
 
 async function loadList<T>(k: string): Promise<T[]> {
-  const raw = await AsyncStorage.getItem(k);
-  return raw ? JSON.parse(raw) : [];
+  try {
+    const raw = await AsyncStorage.getItem(k);
+    if (!raw) return [];
+    try {
+      return await decryptLocalJSON<T[]>(raw);
+    } catch {
+      // Legacy plaintext fallback — if this also fails, return empty list
+      try {
+        return JSON.parse(raw) as T[];
+      } catch {
+        return [];
+      }
+    }
+  } catch {
+    return []; // AsyncStorage read failure — return empty gracefully
+  }
 }
 
 async function saveList<T>(k: string, items: T[]): Promise<void> {
-  await AsyncStorage.setItem(k, JSON.stringify(items));
+  try {
+    const encrypted = await encryptLocalJSON(items);
+    await AsyncStorage.setItem(k, encrypted);
+  } catch (e) {
+    throw e instanceof Error ? e : new Error('Failed to save data locally');
+  }
 }
 
 function uuid(): string {
@@ -139,7 +163,10 @@ export const addMeal = async (
   payload: Omit<MealEntry, 'id' | 'loggedAt'>
 ): Promise<MealEntry> => {
   const all = await loadList<MealEntry>(key(userId, 'meals'));
-  const entry: MealEntry = { ...payload, id: uuid(), loggedAt: toUTCISOString(new Date()) };
+  // Store loggedAt as local date prefix YYYY-MM-DD + T + local time so date filtering works in any timezone
+  const now = new Date();
+  const localISO = `${localDateString(now)}T${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:00.000`;
+  const entry: MealEntry = { ...payload, id: uuid(), loggedAt: localISO };
   await saveList(key(userId, 'meals'), [entry, ...all]);
   return entry;
 };
@@ -153,48 +180,11 @@ export const deleteMeal = async (userId: string, id: string): Promise<void> => {
 };
 
 export const seedDefaultMeals = async (userId: string): Promise<void> => {
-  const today = localDateString();
-  const existing = await getMeals(userId, today);
-  if (existing.length > 0) return;
-  const defaults: Omit<MealEntry, 'id' | 'loggedAt'>[] = [
-    {
-      name: 'Salmon Nigiri',
-      category: 'breakfast',
-      calories: 120,
-      protein: 12,
-      carbs: 14,
-      fat: 3,
-      emoji: '🍣',
-    },
-    {
-      name: 'Lowfat Milk',
-      category: 'breakfast',
-      calories: 80,
-      protein: 8,
-      carbs: 12,
-      fat: 2,
-      emoji: '🥛',
-    },
-    {
-      name: 'Grilled Chicken',
-      category: 'lunch',
-      calories: 320,
-      protein: 42,
-      carbs: 8,
-      fat: 12,
-      emoji: '🍗',
-    },
-    {
-      name: 'Brown Rice Bowl',
-      category: 'lunch',
-      calories: 240,
-      protein: 6,
-      carbs: 48,
-      fat: 3,
-      emoji: '🍚',
-    },
-  ];
-  for (const d of defaults) await addMeal(userId, d);
+  // Only seed once ever — check a permanent flag, not daily meals
+  const flagKey = key(userId, 'meals_seeded');
+  const flagRaw = await AsyncStorage.getItem(flagKey);
+  if (flagRaw === 'true') return;
+  await AsyncStorage.setItem(flagKey, 'true');
 };
 
 // ── Sleep Schedules ───────────────────────────────────────────────────────────
@@ -213,12 +203,76 @@ export const toggleSleepSchedule = async (userId: string, id: string): Promise<v
   );
 };
 
+export const addSleepSchedule = async (
+  userId: string,
+  payload: Omit<SleepSchedule, 'id'>
+): Promise<SleepSchedule> => {
+  const list = await getSleepSchedules(userId);
+  const entry: SleepSchedule = { ...payload, id: uuid() };
+  await saveList(key(userId, 'sleep_schedules'), [...list, entry]);
+  return entry;
+};
+
+export const deleteSleepSchedule = async (userId: string, id: string): Promise<void> => {
+  const list = await getSleepSchedules(userId);
+  await saveList(
+    key(userId, 'sleep_schedules'),
+    list.filter((s) => s.id !== id)
+  );
+};
+
+export const updateSleepSchedule = async (
+  userId: string,
+  id: string,
+  patch: Partial<Omit<SleepSchedule, 'id'>>
+): Promise<void> => {
+  const list = await getSleepSchedules(userId);
+  await saveList(
+    key(userId, 'sleep_schedules'),
+    list.map((s) => (s.id === id ? { ...s, ...patch } : s))
+  );
+};
+
 export const seedDefaultSleepSchedules = async (userId: string): Promise<void> => {
   const existing = await getSleepSchedules(userId);
-  if (existing.length > 0) return;
+  // Migrate old schedules missing new fields
+  if (existing.length > 0) {
+    const needsMigration = existing.some((s) => s.days === undefined);
+    if (needsMigration) {
+      const migrated = existing.map((s) => ({
+        ...s,
+        days: s.days ?? [],
+        repeat: s.repeat ?? true,
+        vibrate: s.vibrate ?? false,
+        snoozeMin: s.snoozeMin ?? 5,
+      }));
+      await saveList(key(userId, 'sleep_schedules'), migrated);
+    }
+    return;
+  }
   const defaults: SleepSchedule[] = [
-    { id: uuid(), type: 'bedtime', time: '21:00', label: 'Bedtime', enabled: true },
-    { id: uuid(), type: 'alarm', time: '05:10', label: 'Alarm', enabled: true },
+    {
+      id: uuid(),
+      type: 'bedtime',
+      time: '22:30',
+      label: 'Bedtime',
+      enabled: true,
+      days: [],
+      repeat: true,
+      vibrate: false,
+      snoozeMin: 5,
+    },
+    {
+      id: uuid(),
+      type: 'alarm',
+      time: '07:00',
+      label: 'Wake Up',
+      enabled: true,
+      days: [],
+      repeat: true,
+      vibrate: true,
+      snoozeMin: 5,
+    },
   ];
   await saveList(key(userId, 'sleep_schedules'), defaults);
 };
