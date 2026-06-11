@@ -40,7 +40,7 @@ const s = StyleSheet.create({
     backgroundColor: COLORS.bgCard,
     borderWidth: 1,
     borderColor: COLORS.border,
-    shadowColor: '#7C3AED',
+    shadowColor: '#0891B2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
     shadowRadius: 14,

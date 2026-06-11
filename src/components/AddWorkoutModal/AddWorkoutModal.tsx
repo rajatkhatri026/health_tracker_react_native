@@ -294,10 +294,10 @@ const AddWorkoutModal: React.FC<Props> = ({ visible, onClose, onSave, workout })
           {step === 'details' && (
             <TouchableOpacity onPress={handleSave} disabled={saving}>
               {saving ? (
-                <ActivityIndicator color="#A78BFA" size="small" />
+                <ActivityIndicator color="#38BDF8" size="small" />
               ) : (
                 <LinearGradient
-                  colors={['#7C3AED', '#06B6D4']}
+                  colors={['#0891B2', '#06B6D4']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={{ borderRadius: RADIUS.full, paddingHorizontal: 16, paddingVertical: 8 }}
@@ -506,7 +506,7 @@ const AddWorkoutModal: React.FC<Props> = ({ visible, onClose, onSave, workout })
                     <TouchableOpacity key={opt.key} onPress={() => setRepeat(opt.key)}>
                       {repeat === opt.key ? (
                         <LinearGradient
-                          colors={['#7C3AED', '#06B6D4']}
+                          colors={['#0891B2', '#06B6D4']}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 0 }}
                           style={{
@@ -557,7 +557,7 @@ const AddWorkoutModal: React.FC<Props> = ({ visible, onClose, onSave, workout })
                           >
                             {sel ? (
                               <LinearGradient
-                                colors={['#7C3AED', '#06B6D4']}
+                                colors={['#0891B2', '#06B6D4']}
                                 style={{
                                   width: 36,
                                   height: 36,
@@ -595,7 +595,7 @@ const AddWorkoutModal: React.FC<Props> = ({ visible, onClose, onSave, workout })
 
                 {/* Preview count */}
                 {repeat !== 'none' && (
-                  <Text style={{ fontSize: 11, color: '#A78BFA', marginTop: 8 }}>
+                  <Text style={{ fontSize: 11, color: '#38BDF8', marginTop: 8 }}>
                     {(() => {
                       const count = buildScheduleDates().length;
                       return `${count} session${count > 1 ? 's' : ''} will be created`;
@@ -630,14 +630,14 @@ const AddWorkoutModal: React.FC<Props> = ({ visible, onClose, onSave, workout })
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 6,
-                  backgroundColor: '#EDE9FE',
+                  backgroundColor: '#E0F7FA',
                   borderRadius: RADIUS.full,
                   paddingHorizontal: 12,
                   paddingVertical: 6,
                 }}
               >
-                <IconPlus size={13} color="#7C3AED" strokeWidth={2.5} />
-                <Text style={{ color: '#7C3AED', fontSize: 12, fontWeight: '600' }}>Add</Text>
+                <IconPlus size={13} color="#0891B2" strokeWidth={2.5} />
+                <Text style={{ color: '#0891B2', fontSize: 12, fontWeight: '600' }}>Add</Text>
               </TouchableOpacity>
             </View>
 
@@ -655,7 +655,7 @@ const AddWorkoutModal: React.FC<Props> = ({ visible, onClose, onSave, workout })
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
                   <Text
-                    style={{ fontSize: 13, color: '#A78BFA', fontWeight: '700', marginRight: 10 }}
+                    style={{ fontSize: 13, color: '#38BDF8', fontWeight: '700', marginRight: 10 }}
                   >
                     #{idx + 1}
                   </Text>

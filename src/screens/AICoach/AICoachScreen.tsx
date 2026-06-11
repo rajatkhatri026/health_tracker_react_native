@@ -17,8 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
-import { useSubscription } from '../../hooks/useSubscription';
-import { usePremium } from '../../hooks/usePremium';
+
 import { sendChatMessage, type ChatMessage } from '../../api/ai';
 import Svg, { Defs, LinearGradient as SvgGrad, Stop, Circle } from 'react-native-svg';
 
@@ -71,7 +70,7 @@ const TypingIndicator: React.FC = () => {
             width: 7,
             height: 7,
             borderRadius: 4,
-            backgroundColor: '#A78BFA',
+            backgroundColor: '#38BDF8',
             transform: [{ translateY: dot }],
           }}
         />
@@ -101,7 +100,7 @@ const MessageBubble: React.FC<{ msg: ChatMessage; fadeAnim: Animated.Value }> = 
       {!isUser && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
           <LinearGradient
-            colors={['#7C3AED', '#06B6D4']}
+            colors={['#0891B2', '#06B6D4']}
             style={{
               width: 22,
               height: 22,
@@ -119,7 +118,7 @@ const MessageBubble: React.FC<{ msg: ChatMessage; fadeAnim: Animated.Value }> = 
       )}
       {isUser ? (
         <LinearGradient
-          colors={['#7C3AED', '#4F46E5']}
+          colors={['#0891B2', '#0E7490']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{
@@ -127,7 +126,7 @@ const MessageBubble: React.FC<{ msg: ChatMessage; fadeAnim: Animated.Value }> = 
             paddingVertical: 12,
             borderRadius: 20,
             borderBottomRightRadius: 6,
-            shadowColor: '#7C3AED',
+            shadowColor: '#0891B2',
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.35,
             shadowRadius: 8,
@@ -147,7 +146,7 @@ const MessageBubble: React.FC<{ msg: ChatMessage; fadeAnim: Animated.Value }> = 
             borderBottomLeftRadius: 6,
             backgroundColor: '#FFFFFF',
             borderWidth: 1,
-            borderColor: '#EDE9FE',
+            borderColor: '#E0F7FA',
           }}
         >
           <Text style={{ color: '#0F0F1A', fontSize: 15, lineHeight: 22 }}>{msg.content}</Text>
@@ -159,8 +158,7 @@ const MessageBubble: React.FC<{ msg: ChatMessage; fadeAnim: Animated.Value }> = 
 
 const AICoachScreen: React.FC = () => {
   const { user } = useAuth();
-  const { sub } = useSubscription();
-  const { isPremium } = usePremium();
+
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
 
@@ -171,14 +169,6 @@ const AICoachScreen: React.FC = () => {
   const listRef = useRef<FlatList>(null);
   const inputRef = useRef<TextInput>(null);
   const [showSuggestions, setShowSuggestions] = useState(true);
-
-  // Gate — navigate back if not premium
-  useEffect(() => {
-    if (!isPremium && !sub.isActive && !sub.isPaid) {
-      navigation.goBack();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPremium, sub.isActive, sub.isPaid]);
 
   const getFadeAnim = useCallback(
     (index: number) => {
@@ -284,8 +274,8 @@ const AICoachScreen: React.FC = () => {
       <Svg width={SW} height={320} style={{ position: 'absolute', top: 0 }}>
         <Defs>
           <SvgGrad id="orb1" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor="#7C3AED" stopOpacity="0.06" />
-            <Stop offset="100%" stopColor="#4F46E5" stopOpacity="0" />
+            <Stop offset="0%" stopColor="#0891B2" stopOpacity="0.06" />
+            <Stop offset="100%" stopColor="#0E7490" stopOpacity="0" />
           </SvgGrad>
           <SvgGrad id="orb2" x1="0%" y1="0%" x2="100%" y2="100%">
             <Stop offset="0%" stopColor="#06B6D4" stopOpacity="0.06" />
@@ -338,7 +328,7 @@ const AICoachScreen: React.FC = () => {
 
           {/* AI Avatar */}
           <LinearGradient
-            colors={['#7C3AED', '#4F46E5', '#06B6D4']}
+            colors={['#0891B2', '#0E7490', '#06B6D4']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={{
@@ -347,7 +337,7 @@ const AICoachScreen: React.FC = () => {
               borderRadius: 20,
               alignItems: 'center',
               justifyContent: 'center',
-              shadowColor: '#7C3AED',
+              shadowColor: '#0891B2',
               shadowOffset: { width: 0, height: 6 },
               shadowOpacity: 0.5,
               shadowRadius: 12,
@@ -398,7 +388,7 @@ const AICoachScreen: React.FC = () => {
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}
                 >
                   <LinearGradient
-                    colors={['#7C3AED', '#06B6D4']}
+                    colors={['#0891B2', '#06B6D4']}
                     style={{
                       width: 22,
                       height: 22,
@@ -428,7 +418,7 @@ const AICoachScreen: React.FC = () => {
                     borderBottomLeftRadius: 6,
                     backgroundColor: '#FFFFFF',
                     borderWidth: 1,
-                    borderColor: '#EDE9FE',
+                    borderColor: '#E0F7FA',
                   }}
                 >
                   <TypingIndicator />
@@ -464,10 +454,10 @@ const AICoachScreen: React.FC = () => {
                     borderRadius: 20,
                     backgroundColor: '#FFFFFF',
                     borderWidth: 1,
-                    borderColor: '#EDE9FE',
+                    borderColor: '#E0F7FA',
                   }}
                 >
-                  <Text style={{ fontSize: 13, color: '#7C3AED', fontWeight: '500' }}>
+                  <Text style={{ fontSize: 13, color: '#0891B2', fontWeight: '500' }}>
                     {prompt}
                   </Text>
                 </TouchableOpacity>
@@ -528,7 +518,7 @@ const AICoachScreen: React.FC = () => {
               activeOpacity={0.8}
             >
               <LinearGradient
-                colors={input.trim() && !loading ? ['#7C3AED', '#4F46E5'] : ['#E4E7F0', '#E4E7F0']}
+                colors={input.trim() && !loading ? ['#0891B2', '#0E7490'] : ['#E4E7F0', '#E4E7F0']}
                 style={{
                   width: 36,
                   height: 36,

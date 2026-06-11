@@ -23,6 +23,7 @@ import Svg, {
 } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../context/AuthContext';
 import { getMetrics, createMetric, deleteMetric } from '../../api/metrics';
 import type { Metric } from '../../types';
@@ -96,7 +97,7 @@ const WeightChart: React.FC<{ data: { date: string; value: number }[] }> = ({ da
 
   // Trend: down = good (weight loss), up = gain
   const trend = data[data.length - 1].value - data[0].value;
-  const trendColor = trend < 0 ? '#10B981' : trend > 0 ? '#EF4444' : '#7C3AED';
+  const trendColor = trend < 0 ? '#10B981' : trend > 0 ? '#EF4444' : '#0891B2';
 
   // X labels — show up to 5 evenly spaced
   const labelIdx =
@@ -204,21 +205,36 @@ const WeightProgressScreen: React.FC = () => {
   const [age, setAge] = useState(25);
   const [isMale, setIsMale] = useState(true);
 
+  const weightCacheKey = user ? `weight_metrics_cache_${user.user_id}_${range}` : null;
+
   const load = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
+    // Show cached instantly
+    if (weightCacheKey) {
+      try {
+        const cached = await AsyncStorage.getItem(weightCacheKey);
+        if (cached) {
+          setMetrics(JSON.parse(cached));
+          setLoading(false);
+        }
+      } catch {}
+    }
+    // Refresh from API in background
     try {
       const from = rangeFrom(range);
       const data = await getMetrics(user.user_id, { type: 'weight', from });
-      setMetrics(
-        data.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+      const sorted = data.sort(
+        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
       );
+      setMetrics(sorted);
+      if (weightCacheKey)
+        AsyncStorage.setItem(weightCacheKey, JSON.stringify(sorted)).catch(() => {});
     } catch {
       Alert.alert('Error', 'Failed to load weight data.');
     } finally {
       setLoading(false);
     }
-  }, [user, range]);
+  }, [user, range, weightCacheKey]);
 
   useEffect(() => {
     load();
@@ -336,7 +352,7 @@ const WeightProgressScreen: React.FC = () => {
                   onPress={() => setRange(r)}
                   style={[s.rangeChip, range === r && s.rangeChipActive]}
                 >
-                  <Text style={[s.rangeChipTxt, range === r && { color: '#7C3AED' }]}>{r}</Text>
+                  <Text style={[s.rangeChipTxt, range === r && { color: '#0891B2' }]}>{r}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -367,7 +383,7 @@ const WeightProgressScreen: React.FC = () => {
               style={{ flex: 1 }}
             >
               <LinearGradient
-                colors={['#7C3AED', '#06B6D4']}
+                colors={['#0891B2', '#06B6D4']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={{
@@ -434,7 +450,7 @@ const WeightProgressScreen: React.FC = () => {
                     <Text
                       style={[
                         s.analysisVal,
-                        { color: toIdeal < 0 ? '#10B981' : toIdeal > 0 ? '#F59E0B' : '#7C3AED' },
+                        { color: toIdeal < 0 ? '#10B981' : toIdeal > 0 ? '#F59E0B' : '#0891B2' },
                       ]}
                     >
                       {toIdeal === 0 ? '✓ On target' : `${toIdeal > 0 ? '+' : ''}${toIdeal} kg`}
@@ -560,7 +576,7 @@ const s = StyleSheet.create({
     borderRadius: RADIUS.full,
     backgroundColor: COLORS.bgInput,
   },
-  rangeChipActive: { backgroundColor: '#EDE9FE' },
+  rangeChipActive: { backgroundColor: '#E0F7FA' },
   rangeChipTxt: { fontSize: 10, fontWeight: '700', color: COLORS.textMuted },
   input: {
     flex: 1,
@@ -609,7 +625,7 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
-  logDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#7C3AED' },
+  logDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#0891B2' },
   logVal: { fontSize: 14, fontWeight: '700', color: COLORS.text },
   logDate: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
   disclaimer: {

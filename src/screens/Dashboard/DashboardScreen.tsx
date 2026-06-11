@@ -10,6 +10,7 @@ import {
   Animated,
 } from 'react-native';
 import { useEntranceAnimation, entranceStyle } from '../../hooks/useEntranceAnimation';
+import { useScrollToTopOnTabPress } from '../../hooks/useScrollToTopOnTabPress';
 import Svg, {
   Path,
   Defs,
@@ -34,6 +35,7 @@ import {
   type Badge,
 } from '../../utils/streaks';
 import { usePremium } from '../../hooks/usePremium';
+import { useSubscription } from '../../hooks/useSubscription';
 import { decryptLocal } from '../../utils/localCrypto';
 
 import { useMetrics } from '../../hooks/useMetrics';
@@ -56,8 +58,6 @@ import {
   IconMoon,
   IconFlame,
   IconChevronRight,
-  IconTarget,
-  IconWeight,
   IconAlarm,
   IconDumbbell,
   IconUtensils,
@@ -139,7 +139,7 @@ const WeeklyChart: React.FC<{ values: number[]; color1: string; color2: string }
               }}
             >
               <LinearGradient
-                colors={i === todayIdx ? [color1, color2] : ['#F0EEFF', '#F0EEFF']}
+                colors={i === todayIdx ? [color1, color2] : ['#E0F7FA', '#E0F7FA']}
                 start={{ x: 0, y: 1 }}
                 end={{ x: 0, y: 0 }}
                 style={{ height: `${pct}%`, borderRadius: 8 }}
@@ -164,12 +164,12 @@ const WeeklyChart: React.FC<{ values: number[]; color1: string; color2: string }
 const GRAD_MAP: Record<string, [string, string]> = {
   heart_rate: ['#EC4899', '#F43F5E'],
   water: ['#3B82F6', '#06B6D4'],
-  sleep: ['#7C3AED', '#A78BFA'],
+  sleep: ['#0891B2', '#38BDF8'],
   nutrition: ['#F59E0B', '#EF4444'],
 };
 
 const WORKOUT_GRADS: [string, string][] = [
-  ['#7C3AED', '#A78BFA'],
+  ['#0891B2', '#38BDF8'],
   ['#3B82F6', '#06B6D4'],
   ['#10B981', '#34D399'],
 ];
@@ -182,7 +182,7 @@ const STAT_CONFIG = [
     Icon: IconHeart,
     glow: '#EC4899',
   },
-  { key: 'sleep' as MetricType, label: 'Sleep', unit: 'hrs', Icon: IconMoon, glow: '#7C3AED' },
+  { key: 'sleep' as MetricType, label: 'Sleep', unit: 'hrs', Icon: IconMoon, glow: '#0891B2' },
   {
     key: 'nutrition' as MetricType,
     label: 'Calories',
@@ -197,10 +197,13 @@ const DashboardScreen: React.FC = () => {
   const { user } = useAuth();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useScrollToTopOnTabPress();
   const [streak, setStreak] = useState<StreakData>({ current: 0, best: 0, lastDay: '' });
   const [badges, setBadges] = useState<Badge[]>([]);
   const { isPremium } = usePremium();
+  const { sub, refresh: refreshSub } = useSubscription();
+  // Source of truth is backend — isPremium (AsyncStorage) is only a local cache
+  const isSubscribed = sub.isActive || sub.isPaid;
 
   // ── Premium toast ────────────────────────────────────────────────────────
   const [toastMsg, setToastMsg] = useState('');
@@ -219,7 +222,7 @@ const DashboardScreen: React.FC = () => {
   };
 
   const handlePremiumCardPress = (screen: string, label: string) => {
-    if (!isPremium) {
+    if (!isSubscribed) {
       showPremiumToast(label);
       return;
     }
@@ -311,7 +314,6 @@ const DashboardScreen: React.FC = () => {
   // Refresh every time user navigates to dashboard
   useFocusEffect(
     useCallback(() => {
-      scrollRef.current?.scrollTo({ y: 0, animated: false });
       refreshAll().catch(() => {});
       checkInToday().then(setStreak);
       loadBadges().then(setBadges);
@@ -330,73 +332,93 @@ const DashboardScreen: React.FC = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* Background glow */}
-      <Svg width={width} height={300} style={{ position: 'absolute', top: 0 }}>
-        <Defs>
-          <SvgGrad id="hdrG" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor="#7C3AED" stopOpacity="0.08" />
-            <Stop offset="100%" stopColor="#06B6D4" stopOpacity="0.04" />
-          </SvgGrad>
-        </Defs>
-        <Ellipse cx={width * 0.3} cy={-20} rx={200} ry={180} fill="url(#hdrG)" />
-        <Circle cx={width * 0.85} cy={120} r={90} fill="#06B6D4" fillOpacity="0.04" />
-      </Svg>
-
-      {/* Header */}
-      <View
+      {/* Gradient Header */}
+      <LinearGradient
+        colors={['#0C2340', '#0891B2']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
         style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+          paddingTop: insets.top + 14,
+          paddingBottom: 20,
           paddingHorizontal: 24,
-          paddingTop: insets.top + 10,
-          paddingBottom: 8,
+          overflow: 'hidden',
         }}
       >
-        <NexaraLogo size={36} variant="full" showText textSize={20} theme="light" />
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: '500' }}>
-              {greet()} 👋
-            </Text>
-            <Text style={{ fontSize: 14, fontWeight: '700', color: COLORS.text, marginTop: 1 }}>
-              {user?.name || 'Athlete'}
-            </Text>
+        {/* Decorative circles */}
+        <View
+          style={{
+            position: 'absolute',
+            width: 180,
+            height: 180,
+            borderRadius: 90,
+            top: -60,
+            right: -40,
+            backgroundColor: 'rgba(255,255,255,0.06)',
+          }}
+        />
+        <View
+          style={{
+            position: 'absolute',
+            width: 100,
+            height: 100,
+            borderRadius: 50,
+            bottom: -30,
+            left: -20,
+            backgroundColor: 'rgba(255,255,255,0.04)',
+          }}
+        />
+
+        <View
+          style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+        >
+          {/* Left: logo */}
+          <NexaraLogo size={32} variant="full" showText textSize={18} theme="dark" />
+
+          {/* Right: greeting + bell */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={{ fontSize: 11, color: 'rgba(186,230,253,0.8)', fontWeight: '500' }}>
+                {greet()} 👋
+              </Text>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff', marginTop: 1 }}>
+                {user?.name || 'Athlete'}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setShowNotifications(true)}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 13,
+                backgroundColor: 'rgba(255,255,255,0.15)',
+                borderWidth: 1,
+                borderColor: unreadCount > 0 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <IconBell size={17} color="#fff" />
+              {unreadCount > 0 && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 6,
+                    right: 6,
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: '#EF4444',
+                    borderWidth: 1.5,
+                    borderColor: 'rgba(255,255,255,0.3)',
+                  }}
+                />
+              )}
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            onPress={() => setShowNotifications(true)}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 13,
-              backgroundColor: COLORS.bgCard,
-              borderWidth: 1,
-              borderColor: unreadCount > 0 ? 'rgba(124,58,237,0.5)' : COLORS.border,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <IconBell size={17} color={unreadCount > 0 ? '#A78BFA' : COLORS.textSub} />
-            {unreadCount > 0 && (
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 6,
-                  right: 6,
-                  width: 8,
-                  height: 8,
-                  borderRadius: 4,
-                  backgroundColor: '#EF4444',
-                  borderWidth: 1.5,
-                  borderColor: COLORS.bg,
-                }}
-              />
-            )}
-          </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
       <ScrollView
         ref={scrollRef}
@@ -412,75 +434,86 @@ const DashboardScreen: React.FC = () => {
         <FadeIn visible={!isLoading} style={{ paddingHorizontal: 20 }}>
           {/* ── Today Progress Ring card ─────────────────────────────────── */}
           <Animated.View style={entranceStyle(s0)}>
-            <LinearGradient
-              colors={['#FFFFFF', '#F8F6FF']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
+            <View
               style={{
+                backgroundColor: '#FFFFFF',
                 borderRadius: RADIUS.xl,
                 borderWidth: 1,
-                borderColor: '#EDE9FE',
+                borderColor: '#E0F7FA',
                 marginTop: 20,
-                padding: 22,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                shadowColor: '#7C3AED',
+                overflow: 'hidden',
+                shadowColor: '#0891B2',
                 shadowOffset: { width: 0, height: 12 },
-                shadowOpacity: 0.07,
+                shadowOpacity: 0.08,
                 shadowRadius: 16,
                 elevation: 4,
               }}
             >
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    fontSize: 11,
-                    color: COLORS.textMuted,
-                    fontWeight: '700',
-                    letterSpacing: 1,
-                    marginBottom: 6,
-                  }}
-                >
-                  TODAY&apos;S PROGRESS
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 28,
-                    fontWeight: '800',
-                    color: COLORS.text,
-                    letterSpacing: -0.5,
-                  }}
-                >
-                  {stepsNow.toLocaleString()}
-                </Text>
-                <Text style={{ fontSize: 13, color: COLORS.textSub, marginTop: 2 }}>
-                  steps · {stepsPct}% of {stepsGoal.toLocaleString()} goal
-                </Text>
-                <View style={{ flexDirection: 'row', gap: 16, marginTop: 18 }}>
-                  {[
-                    { label: 'Active', val: `${activeMins}m`, c: '#A78BFA' },
-                    { label: 'Burned', val: `${caloriesToday} kcal`, c: '#06B6D4' },
-                  ].map((s) => (
-                    <View key={s.label}>
-                      <Text style={{ fontSize: 15, fontWeight: '700', color: s.c }}>{s.val}</Text>
-                      <Text style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 1 }}>
-                        {s.label}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-              <RingProgress
-                size={120}
-                strokeWidth={11}
-                progress={stepsProgress}
-                gradientColors={['#7C3AED', '#06B6D4']}
-                trackColor="#DDD6FE"
-                label={`${stepsPct}%`}
-                sublabel="Done"
+              {/* Cyan accent strip at top */}
+              <LinearGradient
+                colors={['#0891B2', '#06B6D4']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{ height: 4 }}
               />
-            </LinearGradient>
+              <View
+                style={{
+                  padding: 22,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      fontSize: 11,
+                      color: COLORS.primary,
+                      fontWeight: '700',
+                      letterSpacing: 1,
+                      marginBottom: 6,
+                    }}
+                  >
+                    TODAY&apos;S PROGRESS
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 28,
+                      fontWeight: '800',
+                      color: COLORS.text,
+                      letterSpacing: -0.5,
+                    }}
+                  >
+                    {stepsNow.toLocaleString()}
+                  </Text>
+                  <Text style={{ fontSize: 13, color: COLORS.textSub, marginTop: 2 }}>
+                    steps · {stepsPct}% of {stepsGoal.toLocaleString()} goal
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 16, marginTop: 18 }}>
+                    {[
+                      { label: 'Active', val: `${activeMins}m`, c: COLORS.primary },
+                      { label: 'Burned', val: `${caloriesToday} kcal`, c: '#06B6D4' },
+                    ].map((s) => (
+                      <View key={s.label}>
+                        <Text style={{ fontSize: 15, fontWeight: '700', color: s.c }}>{s.val}</Text>
+                        <Text style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 1 }}>
+                          {s.label}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+                <RingProgress
+                  size={120}
+                  strokeWidth={11}
+                  progress={stepsProgress}
+                  gradientColors={['#0891B2', '#06B6D4']}
+                  trackColor="#BAE6FD"
+                  label={`${stepsPct}%`}
+                  sublabel="DONE"
+                />
+              </View>
+            </View>
           </Animated.View>
 
           {/* ── Water Intake Card ────────────────────────────────────────── */}
@@ -508,15 +541,15 @@ const DashboardScreen: React.FC = () => {
                   style={{ marginTop: 16 }}
                 >
                   <LinearGradient
-                    colors={['#EFF6FF', '#F0FDFF']}
+                    colors={['#FFFFFF', '#FFFFFF']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={{
                       borderRadius: RADIUS.xl,
                       borderWidth: 1,
-                      borderColor: '#DBEAFE',
+                      borderColor: '#E0F7FA',
                       padding: 20,
-                      shadowColor: '#7C3AED',
+                      shadowColor: '#0891B2',
                       shadowOffset: { width: 0, height: 10 },
                       shadowOpacity: 0.07,
                       shadowRadius: 16,
@@ -534,7 +567,7 @@ const DashboardScreen: React.FC = () => {
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                         <LinearGradient
-                          colors={['#1d4ed8', '#0891b2']}
+                          colors={['#0891B2', '#06B6D4']}
                           style={{
                             width: 38,
                             height: 38,
@@ -570,12 +603,12 @@ const DashboardScreen: React.FC = () => {
                       </View>
                       <View
                         style={{
-                          backgroundColor: COLORS.tintBlue,
+                          backgroundColor: '#E0F7FA',
                           borderRadius: 10,
                           paddingHorizontal: 10,
                           paddingVertical: 5,
                           borderWidth: 1,
-                          borderColor: '#DBEAFE',
+                          borderColor: '#E0F7FA',
                         }}
                       >
                         <Text style={{ color: '#60A5FA', fontSize: 12, fontWeight: '700' }}>
@@ -591,8 +624,8 @@ const DashboardScreen: React.FC = () => {
                         size={110}
                         strokeWidth={10}
                         progress={pct}
-                        gradientColors={['#3B82F6', '#06B6D4']}
-                        trackColor="#DBEAFE"
+                        gradientColors={['#0891B2', '#06B6D4']}
+                        trackColor="#BAE6FD"
                         centerContent={
                           <View style={{ alignItems: 'center' }}>
                             <Text
@@ -632,7 +665,7 @@ const DashboardScreen: React.FC = () => {
                                 : `${Math.round(remaining)} ml`,
                             color: '#22D3EE',
                           },
-                          { label: 'Glasses', value: `${glasses} glasses`, color: '#A78BFA' },
+                          { label: 'Glasses', value: `${glasses} glasses`, color: '#38BDF8' },
                         ].map((s) => (
                           <View
                             key={s.label}
@@ -665,7 +698,7 @@ const DashboardScreen: React.FC = () => {
                         <View
                           style={{
                             height: 5,
-                            backgroundColor: COLORS.tintBlue,
+                            backgroundColor: '#E0F7FA',
                             borderRadius: 99,
                             overflow: 'hidden',
                             marginTop: 2,
@@ -695,149 +728,6 @@ const DashboardScreen: React.FC = () => {
                 </TouchableOpacity>
               );
             })()}
-
-            {/* ── Today Target ─────────────────────────────────────────────── */}
-            <GlassCard
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginTop: 16,
-              }}
-              padding={16}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <View
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 12,
-                    backgroundColor: COLORS.tintPurple,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <IconTarget size={18} color="#A78BFA" />
-                </View>
-                <View>
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: COLORS.text }}>
-                    Today Target
-                  </Text>
-                  <Text style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 1 }}>
-                    {upcomingWorkouts.length > 0
-                      ? `${upcomingWorkouts.length} workout${upcomingWorkouts.length > 1 ? 's' : ''} remaining`
-                      : activeGoals.length > 0
-                        ? `${activeGoals.length} active goal${activeGoals.length > 1 ? 's' : ''}`
-                        : 'All done for today!'}
-                  </Text>
-                </View>
-              </View>
-              <LinearGradient
-                colors={['#7C3AED', '#06B6D4']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={{ borderRadius: RADIUS.full }}
-              >
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('Workout')}
-                  style={{ paddingHorizontal: 18, paddingVertical: 9 }}
-                >
-                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>Check</Text>
-                </TouchableOpacity>
-              </LinearGradient>
-            </GlassCard>
-          </Animated.View>
-
-          {/* ── Activity Status Grid ──────────────────────────────────────── */}
-          <Animated.View style={entranceStyle(s2)}>
-            <Text
-              style={{
-                fontSize: 17,
-                fontWeight: '800',
-                color: COLORS.text,
-                marginTop: 28,
-                marginBottom: 14,
-                letterSpacing: -0.3,
-              }}
-            >
-              Activity Status
-            </Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-              {STAT_CONFIG.map((stat) => {
-                const grad = GRAD_MAP[stat.key] ?? ['#7C3AED', '#06B6D4'];
-                const metricVal = latest[stat.key]?.value;
-                // Use real-time data for calories and steps
-                const displayVal =
-                  stat.key === 'nutrition'
-                    ? String(caloriesToday)
-                    : stat.key === 'steps'
-                      ? stepsNow.toLocaleString()
-                      : metricVal !== undefined
-                        ? String(metricVal)
-                        : '0';
-                const sparkData = weeklyValues(stat.key);
-                return (
-                  <GlassCard
-                    key={stat.key}
-                    style={{ width: (width - 52) / 2 }}
-                    padding={16}
-                    glow={stat.glow}
-                  >
-                    <LinearGradient
-                      colors={[`${grad[0]}22`, `${grad[1]}11`]}
-                      style={{
-                        position: 'absolute',
-                        borderRadius: RADIUS.lg,
-                        left: 0,
-                        right: 0,
-                        top: 0,
-                        bottom: 0,
-                      }}
-                    />
-                    <View
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 10,
-                        backgroundColor: `${grad[0]}30`,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginBottom: 10,
-                      }}
-                    >
-                      <stat.Icon size={17} color={grad[0]} />
-                    </View>
-                    <Text style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 4 }}>
-                      {stat.label}
-                    </Text>
-                    <Text
-                      style={{
-                        fontSize: 20,
-                        fontWeight: '800',
-                        color: COLORS.text,
-                        letterSpacing: -0.5,
-                      }}
-                    >
-                      {displayVal}
-                      {stat.unit ? (
-                        <Text style={{ fontSize: 12, fontWeight: '500', color: COLORS.textSub }}>
-                          {' '}
-                          {stat.unit}
-                        </Text>
-                      ) : null}
-                    </Text>
-                    <View style={{ marginTop: 8 }}>
-                      <Sparkline
-                        data={sparkData}
-                        color={grad[0]}
-                        w={(width - 52) / 2 - 32}
-                        h={28}
-                      />
-                    </View>
-                  </GlassCard>
-                );
-              })}
-            </View>
           </Animated.View>
 
           {/* ── Workout Progress Chart ────────────────────────────────────── */}
@@ -851,14 +741,24 @@ const DashboardScreen: React.FC = () => {
                 marginBottom: 14,
               }}
             >
-              <Text
-                style={{ fontSize: 17, fontWeight: '800', color: COLORS.text, letterSpacing: -0.3 }}
-              >
-                Workout Progress
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View
+                  style={{ width: 4, height: 18, borderRadius: 2, backgroundColor: COLORS.primary }}
+                />
+                <Text
+                  style={{
+                    fontSize: 17,
+                    fontWeight: '800',
+                    color: COLORS.text,
+                    letterSpacing: -0.3,
+                  }}
+                >
+                  Workout Progress
+                </Text>
+              </View>
               <View
                 style={{
-                  backgroundColor: COLORS.tintPurple,
+                  backgroundColor: '#E0F7FA',
                   borderRadius: RADIUS.full,
                   paddingHorizontal: 12,
                   paddingVertical: 5,
@@ -870,7 +770,7 @@ const DashboardScreen: React.FC = () => {
               </View>
             </View>
             <GlassCard padding={18}>
-              <WeeklyChart values={weeklyValues('steps')} color1="#7C3AED" color2="#06B6D4" />
+              <WeeklyChart values={weeklyValues('steps')} color1="#0891B2" color2="#06B6D4" />
             </GlassCard>
           </Animated.View>
 
@@ -885,11 +785,21 @@ const DashboardScreen: React.FC = () => {
                 marginBottom: 14,
               }}
             >
-              <Text
-                style={{ fontSize: 17, fontWeight: '800', color: COLORS.text, letterSpacing: -0.3 }}
-              >
-                Upcoming Workouts
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View
+                  style={{ width: 4, height: 18, borderRadius: 2, backgroundColor: COLORS.primary }}
+                />
+                <Text
+                  style={{
+                    fontSize: 17,
+                    fontWeight: '800',
+                    color: COLORS.text,
+                    letterSpacing: -0.3,
+                  }}
+                >
+                  Upcoming Workouts
+                </Text>
+              </View>
               <TouchableOpacity onPress={() => navigation.navigate('Workout')}>
                 <Text style={{ color: COLORS.primary, fontSize: 13, fontWeight: '600' }}>
                   See all →
@@ -948,7 +858,7 @@ const DashboardScreen: React.FC = () => {
                         <View
                           style={{
                             height: 3,
-                            backgroundColor: '#F0EEFF',
+                            backgroundColor: '#E0F7FA',
                             borderRadius: 99,
                             marginTop: 8,
                             overflow: 'hidden',
@@ -979,33 +889,28 @@ const DashboardScreen: React.FC = () => {
 
           {/* ── Streak + Badges ───────────────────────────────────────────── */}
           <Animated.View style={entranceStyle(s4)}>
-            <Text
+            <View
               style={{
-                fontSize: 17,
-                fontWeight: '800',
-                color: COLORS.text,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
                 marginTop: 28,
                 marginBottom: 14,
-                letterSpacing: -0.3,
               }}
             >
-              Your Streak
-            </Text>
+              <View
+                style={{ width: 4, height: 18, borderRadius: 2, backgroundColor: COLORS.primary }}
+              />
+              <Text
+                style={{ fontSize: 17, fontWeight: '800', color: COLORS.text, letterSpacing: -0.3 }}
+              >
+                Your Streak
+              </Text>
+            </View>
             {/* Streak row */}
             <View style={{ flexDirection: 'row', gap: 12 }}>
               {/* Current streak card */}
               <GlassCard style={{ flex: 1 }} padding={16} glow="#EF4444">
-                <LinearGradient
-                  colors={['#EF444422', '#DC262611']}
-                  style={{
-                    position: 'absolute',
-                    borderRadius: RADIUS.lg,
-                    left: 0,
-                    right: 0,
-                    top: 0,
-                    bottom: 0,
-                  }}
-                />
                 <View
                   style={{
                     width: 36,
@@ -1039,17 +944,6 @@ const DashboardScreen: React.FC = () => {
               </GlassCard>
               {/* Best streak */}
               <GlassCard style={{ flex: 1 }} padding={16} glow="#F59E0B">
-                <LinearGradient
-                  colors={['#F59E0B22', '#D9770611']}
-                  style={{
-                    position: 'absolute',
-                    borderRadius: RADIUS.lg,
-                    left: 0,
-                    right: 0,
-                    top: 0,
-                    bottom: 0,
-                  }}
-                />
                 <View
                   style={{
                     width: 36,
@@ -1089,7 +983,7 @@ const DashboardScreen: React.FC = () => {
                   <View
                     key={b.id}
                     style={{
-                      backgroundColor: '#EDE9FE',
+                      backgroundColor: '#E0F7FA',
                       borderRadius: 12,
                       paddingHorizontal: 12,
                       paddingVertical: 6,
@@ -1097,11 +991,11 @@ const DashboardScreen: React.FC = () => {
                       alignItems: 'center',
                       gap: 5,
                       borderWidth: 1,
-                      borderColor: '#DDD6FE',
+                      borderColor: '#BAE6FD',
                     }}
                   >
                     <Text style={{ fontSize: 14 }}>{b.emoji}</Text>
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#7C3AED' }}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#0891B2' }}>
                       {b.label}
                     </Text>
                   </View>
@@ -1112,30 +1006,27 @@ const DashboardScreen: React.FC = () => {
 
           {/* ── Quick Tools — Free ────────────────────────────────────────── */}
           <Animated.View style={{ paddingBottom: 4 }}>
-            <Text
+            <View
               style={{
-                fontSize: 17,
-                fontWeight: '800',
-                color: COLORS.text,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
                 marginTop: 28,
                 marginBottom: 14,
-                letterSpacing: -0.3,
               }}
             >
-              Quick Tools
-            </Text>
+              <View
+                style={{ width: 4, height: 18, borderRadius: 2, backgroundColor: COLORS.primary }}
+              />
+              <Text
+                style={{ fontSize: 17, fontWeight: '800', color: COLORS.text, letterSpacing: -0.3 }}
+              >
+                Quick Tools
+              </Text>
+            </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
               {(
                 [
-                  {
-                    screen: 'WeightProgress',
-                    label: 'Weight Log',
-                    sub: 'BMI · Body fat',
-                    Icon: IconWeight,
-                    grad: ['#7C3AED', '#4F46E5'] as const,
-                    glow: '#7C3AED',
-                    premium: false,
-                  },
                   {
                     screen: 'FastingTimer',
                     label: 'Fasting Timer',
@@ -1249,6 +1140,9 @@ const DashboardScreen: React.FC = () => {
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View
+                  style={{ width: 4, height: 18, borderRadius: 2, backgroundColor: COLORS.primary }}
+                />
                 <Text
                   style={{
                     fontSize: 17,
@@ -1259,31 +1153,52 @@ const DashboardScreen: React.FC = () => {
                 >
                   Premium Features
                 </Text>
-                <View
+                {isSubscribed ? (
+                  <View
+                    style={{
+                      backgroundColor: '#D1FAE5',
+                      borderRadius: RADIUS.full,
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                      borderWidth: 1,
+                      borderColor: '#6EE7B7',
+                    }}
+                  >
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#059669' }}>
+                      ✓ Active
+                    </Text>
+                  </View>
+                ) : (
+                  <View
+                    style={{
+                      backgroundColor: '#E0F7FA',
+                      borderRadius: RADIUS.full,
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                      borderWidth: 1,
+                      borderColor: '#BAE6FD',
+                    }}
+                  >
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#0891B2' }}>
+                      👑 PRO
+                    </Text>
+                  </View>
+                )}
+              </View>
+              {!isSubscribed && (
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('Paywall' as any)}
+                  activeOpacity={0.85}
                   style={{
-                    backgroundColor: '#EDE9FE',
+                    backgroundColor: '#0891B2',
                     borderRadius: RADIUS.full,
-                    paddingHorizontal: 8,
-                    paddingVertical: 3,
-                    borderWidth: 1,
-                    borderColor: '#DDD6FE',
+                    paddingHorizontal: 14,
+                    paddingVertical: 6,
                   }}
                 >
-                  <Text style={{ fontSize: 10, fontWeight: '800', color: '#7C3AED' }}>👑 PRO</Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('Paywall' as any)}
-                activeOpacity={0.85}
-                style={{
-                  backgroundColor: '#7C3AED',
-                  borderRadius: RADIUS.full,
-                  paddingHorizontal: 14,
-                  paddingVertical: 6,
-                }}
-              >
-                <Text style={{ fontSize: 11, fontWeight: '800', color: '#fff' }}>Upgrade →</Text>
-              </TouchableOpacity>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#fff' }}>Upgrade →</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
@@ -1294,8 +1209,8 @@ const DashboardScreen: React.FC = () => {
                     label: 'AI Coach',
                     sub: 'Personal AI health',
                     Icon: IconActivity,
-                    grad: ['#7C3AED', '#4F46E5'] as const,
-                    glow: '#7C3AED',
+                    grad: ['#0891B2', '#0E7490'] as const,
+                    glow: '#0891B2',
                   },
                   {
                     screen: 'MealPlanner',
@@ -1326,7 +1241,7 @@ const DashboardScreen: React.FC = () => {
                     label: 'Weekly Report',
                     sub: 'Progress',
                     Icon: IconStar,
-                    grad: ['#8B5CF6', '#7C3AED'] as const,
+                    grad: ['#8B5CF6', '#0891B2'] as const,
                     glow: '#8B5CF6',
                   },
                 ] as {
@@ -1341,13 +1256,13 @@ const DashboardScreen: React.FC = () => {
                 <TouchableOpacity
                   key={item.screen}
                   onPress={() => handlePremiumCardPress(item.screen, item.label)}
-                  activeOpacity={isPremium ? 0.88 : 1}
+                  activeOpacity={isSubscribed ? 0.88 : 1}
                   style={{ width: (width - 52) / 2 }}
                 >
                   <GlassCard
                     padding={16}
-                    glow={isPremium ? item.glow : '#CBD5E1'}
-                    style={{ minHeight: 116, opacity: isPremium ? 1 : 0.72 }}
+                    glow={isSubscribed ? item.glow : '#CBD5E1'}
+                    style={{ minHeight: 116, opacity: isSubscribed ? 1 : 0.72 }}
                   >
                     <LinearGradient
                       colors={[`${item.grad[0]}22`, `${item.grad[1]}11`]}
@@ -1361,7 +1276,7 @@ const DashboardScreen: React.FC = () => {
                       }}
                     />
                     {/* Lock badge for non-premium */}
-                    {!isPremium && (
+                    {!isSubscribed && (
                       <View
                         style={{
                           position: 'absolute',
@@ -1370,7 +1285,7 @@ const DashboardScreen: React.FC = () => {
                           width: 20,
                           height: 20,
                           borderRadius: 6,
-                          backgroundColor: '#EDE9FE',
+                          backgroundColor: '#E0F7FA',
                           alignItems: 'center',
                           justifyContent: 'center',
                         }}

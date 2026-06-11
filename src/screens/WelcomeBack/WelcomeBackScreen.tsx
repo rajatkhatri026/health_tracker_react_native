@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Svg, {
@@ -27,23 +28,22 @@ import type { RootStackParamList } from '../../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'WelcomeBack'>;
 const { width: W, height: H } = Dimensions.get('window');
-const DURATION = 3000;
 
 // ── Background mesh ───────────────────────────────────────────────────────────
 const BgMesh: React.FC = () => (
   <Svg width={W} height={H} style={StyleSheet.absoluteFill} pointerEvents="none">
     <Defs>
       <RadialGradient id="m1" cx="80%" cy="5%" r="55%">
-        <Stop offset="0%" stopColor="#DDD6FE" stopOpacity="0.9" />
-        <Stop offset="100%" stopColor="#DDD6FE" stopOpacity="0" />
+        <Stop offset="0%" stopColor="#BAE6FD" stopOpacity="0.9" />
+        <Stop offset="100%" stopColor="#BAE6FD" stopOpacity="0" />
       </RadialGradient>
       <RadialGradient id="m2" cx="10%" cy="55%" r="50%">
         <Stop offset="0%" stopColor="#BAE6FD" stopOpacity="0.6" />
         <Stop offset="100%" stopColor="#BAE6FD" stopOpacity="0" />
       </RadialGradient>
       <RadialGradient id="m3" cx="90%" cy="88%" r="45%">
-        <Stop offset="0%" stopColor="#C4B5FD" stopOpacity="0.5" />
-        <Stop offset="100%" stopColor="#C4B5FD" stopOpacity="0" />
+        <Stop offset="0%" stopColor="#7DD3E8" stopOpacity="0.5" />
+        <Stop offset="100%" stopColor="#7DD3E8" stopOpacity="0" />
       </RadialGradient>
     </Defs>
     <Ellipse cx={W * 0.8} cy={H * 0.05} rx={W * 0.7} ry={H * 0.35} fill="url(#m1)" />
@@ -54,12 +54,12 @@ const BgMesh: React.FC = () => (
 
 // ── Floating orb ──────────────────────────────────────────────────────────────
 const ORBS = [
-  { x: 0.1, size: 6, delay: 0, dur: 5000, color: '#A78BFA' },
+  { x: 0.1, size: 6, delay: 0, dur: 5000, color: '#38BDF8' },
   { x: 0.25, size: 4, delay: 700, dur: 4400, color: '#67E8F9' },
-  { x: 0.42, size: 5, delay: 1300, dur: 5200, color: '#818CF8' },
-  { x: 0.6, size: 3, delay: 400, dur: 4800, color: '#A78BFA' },
+  { x: 0.42, size: 5, delay: 1300, dur: 5200, color: '#06B6D4' },
+  { x: 0.6, size: 3, delay: 400, dur: 4800, color: '#38BDF8' },
   { x: 0.75, size: 6, delay: 900, dur: 4600, color: '#67E8F9' },
-  { x: 0.9, size: 4, delay: 200, dur: 5100, color: '#C4B5FD' },
+  { x: 0.9, size: 4, delay: 200, dur: 5100, color: '#7DD3E8' },
 ];
 
 const FloatingOrb: React.FC<(typeof ORBS)[0]> = ({ x, size, delay, dur, color }) => {
@@ -140,6 +140,7 @@ const PulseRing: React.FC<{ delay: number; color: string; size: number }> = ({
 const WelcomeBackScreen: React.FC = () => {
   const navigation = useNavigation<Nav>();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const firstName = user?.name?.split(' ')[0] ?? 'there';
 
   // animated values
@@ -149,9 +150,9 @@ const WelcomeBackScreen: React.FC = () => {
   const tagY = useState(() => new Animated.Value(12))[0];
   const card1Op = useState(() => new Animated.Value(0))[0];
   const card1Y = useState(() => new Animated.Value(32))[0];
-  const card2Op = useState(() => new Animated.Value(0))[0];
-  const card2Y = useState(() => new Animated.Value(32))[0];
-  const shimmerX = useState(() => new Animated.Value(-W))[0];
+
+  const btnOp = useState(() => new Animated.Value(0))[0];
+  const btnY = useState(() => new Animated.Value(20))[0];
 
   useEffect(() => {
     // Logo burst
@@ -181,184 +182,202 @@ const WelcomeBackScreen: React.FC = () => {
       ]),
     ]).start();
 
-    // Card 2 — stats
+    // Button
     Animated.sequence([
-      Animated.delay(680),
+      Animated.delay(900),
       Animated.parallel([
-        Animated.timing(card2Op, { toValue: 1, duration: 450, useNativeDriver: true }),
-        Animated.spring(card2Y, { toValue: 0, useNativeDriver: true, damping: 18, stiffness: 120 }),
+        Animated.timing(btnOp, { toValue: 1, duration: 450, useNativeDriver: true }),
+        Animated.spring(btnY, { toValue: 0, useNativeDriver: true, damping: 18, stiffness: 120 }),
       ]),
     ]).start();
 
-    // Shimmer on name
-    const sh = Animated.loop(
-      Animated.sequence([
-        Animated.delay(1500),
-        Animated.timing(shimmerX, { toValue: W * 0.8, duration: 800, useNativeDriver: true }),
-        Animated.timing(shimmerX, { toValue: -W, duration: 0, useNativeDriver: true }),
-        Animated.delay(4000),
-      ])
-    );
-    sh.start();
-
-    const t = setTimeout(() => navigation.replace('Main'), DURATION);
-    return () => {
-      clearTimeout(t);
-      sh.stop();
-    };
+    return () => {};
   }, []);
 
   return (
     <View style={s.root}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F4F5FA" />
-      <BgMesh />
-      {ORBS.map((o, i) => (
-        <FloatingOrb key={i} {...o} />
-      ))}
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* ── TOP: Logo section ── */}
-      <View style={s.top}>
-        {/* Pulse rings */}
-        <View style={{ alignItems: 'center', justifyContent: 'center', width: 120, height: 120 }}>
-          <PulseRing delay={0} color="rgba(124,58,237,0.25)" size={100} />
-          <PulseRing delay={1000} color="rgba(6,182,212,0.2)" size={100} />
-
-          {/* Logo icon in frosted circle */}
-          <Animated.View
-            style={[s.logoCircle, { transform: [{ scale: logoSc }], opacity: logoOp }]}
-          >
-            <NexaraLogo size={52} variant="icon" />
-          </Animated.View>
-        </View>
-
-        {/* Wordmark + tagline */}
-        <Animated.View
+      {/* ── Gradient Hero ── */}
+      <LinearGradient
+        colors={['#0C2340', '#0891B2', '#0C4A6E']}
+        locations={[0, 0.5, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[s.hero, { paddingTop: insets.top + 20 }]}
+      >
+        {/* Decorative circles */}
+        <View
           style={{
-            opacity: logoOp,
-            transform: [{ scale: logoSc }],
-            marginTop: 16,
-            alignItems: 'center',
+            position: 'absolute',
+            width: 200,
+            height: 200,
+            borderRadius: 100,
+            top: -60,
+            right: -60,
+            backgroundColor: 'rgba(255,255,255,0.06)',
           }}
+        />
+        <View
+          style={{
+            position: 'absolute',
+            width: 120,
+            height: 120,
+            borderRadius: 60,
+            bottom: -20,
+            left: -30,
+            backgroundColor: 'rgba(255,255,255,0.04)',
+          }}
+        />
+
+        <Animated.View
+          style={{ alignItems: 'center', opacity: logoOp, transform: [{ scale: logoSc }] }}
         >
-          <NexaraLogo size={28} variant="full" showText theme="light" />
+          {/* Pulse rings + logo */}
+          <View
+            style={{
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 100,
+              height: 100,
+              marginBottom: 16,
+            }}
+          >
+            <PulseRing delay={0} color="rgba(255,255,255,0.2)" size={80} />
+            <PulseRing delay={1000} color="rgba(255,255,255,0.12)" size={80} />
+            <View style={s.logoCircle}>
+              <NexaraLogo size={46} variant="icon" />
+            </View>
+          </View>
+
+          <Text style={{ fontSize: 28, fontWeight: '900', color: '#fff', letterSpacing: -0.6 }}>
+            Nexara
+          </Text>
+          <Animated.Text
+            style={{
+              fontSize: 14,
+              color: 'rgba(186,230,253,0.85)',
+              fontWeight: '500',
+              marginTop: 4,
+              opacity: tagOp,
+            }}
+          >
+            Your Health, Your Way.
+          </Animated.Text>
         </Animated.View>
-        <Animated.Text style={[s.tagline, { opacity: tagOp, transform: [{ translateY: tagY }] }]}>
-          Your intelligent health companion
-        </Animated.Text>
-      </View>
+      </LinearGradient>
 
       {/* ── CARDS ── */}
       <View style={s.cards}>
         {/* Card 1 — greeting */}
-        <Animated.View style={{ opacity: card1Op, transform: [{ translateY: card1Y }] }}>
+        <Animated.View
+          style={{ opacity: card1Op, transform: [{ translateY: card1Y }], marginTop: 16 }}
+        >
           <View style={s.card}>
             <LinearGradient
-              colors={['#7C3AED', '#0891B2']}
+              colors={['#0891B2', '#06B6D4']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={s.cardBar}
             />
             <Text style={s.labelSmall}>WELCOME BACK</Text>
-
-            {/* Name + shimmer */}
-            <View style={{ overflow: 'hidden' }}>
-              <Text style={s.nameText}>{firstName} 👋</Text>
-              <Animated.View
-                style={[StyleSheet.absoluteFill, { transform: [{ translateX: shimmerX }] }]}
-                pointerEvents="none"
-              >
-                <LinearGradient
-                  colors={['transparent', 'rgba(124,58,237,0.18)', 'transparent']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={{ width: 140, height: '100%' }}
-                />
-              </Animated.View>
-            </View>
-
+            <Text style={s.nameText}>{firstName} 👋</Text>
             <Text style={s.subText}>
               Your health journey continues today.{'\n'}Let&apos;s make it count.
             </Text>
-          </View>
-        </Animated.View>
 
-        {/* Card 2 — stats */}
-        <Animated.View style={{ opacity: card2Op, transform: [{ translateY: card2Y }] }}>
-          <View style={[s.card, { flexDirection: 'row', paddingVertical: 18 }]}>
-            {[
-              { emoji: '🔥', label: 'Streak', value: 'Active' },
-              { emoji: '✅', label: 'Status', value: 'On track' },
-              { emoji: '💪', label: 'Goal', value: 'Crushing' },
-            ].map((item, i) => (
-              <React.Fragment key={i}>
-                {i > 0 && <View style={s.statDivider} />}
-                <View style={s.statItem}>
-                  <Text style={s.statEmoji}>{item.emoji}</Text>
-                  <Text style={s.statValue}>{item.value}</Text>
-                  <Text style={s.statLabel}>{item.label}</Text>
-                </View>
-              </React.Fragment>
-            ))}
+            <View style={[s.statDivider, { width: '100%', height: 1, marginVertical: 14 }]} />
+
+            <View style={{ flexDirection: 'row' }}>
+              {[
+                { emoji: '🔥', label: 'Streak', value: 'Active' },
+                { emoji: '✅', label: 'Status', value: 'On track' },
+                { emoji: '💪', label: 'Goal', value: 'Crushing' },
+              ].map((item, i) => (
+                <React.Fragment key={i}>
+                  {i > 0 && (
+                    <View style={{ width: 1, backgroundColor: '#E0F7FA', marginVertical: 4 }} />
+                  )}
+                  <View style={s.statItem}>
+                    <Text style={s.statEmoji}>{item.emoji}</Text>
+                    <Text style={s.statValue}>{item.value}</Text>
+                    <Text style={s.statLabel}>{item.label}</Text>
+                  </View>
+                </React.Fragment>
+              ))}
+            </View>
           </View>
         </Animated.View>
       </View>
+
+      {/* CTA — pinned at bottom */}
+      <Animated.View
+        style={{
+          opacity: btnOp,
+          transform: [{ translateY: btnY }],
+          paddingHorizontal: 20,
+          paddingBottom: insets.bottom + 16,
+          paddingTop: 16,
+        }}
+      >
+        <TouchableOpacity onPress={() => navigation.replace('Main')} activeOpacity={0.88}>
+          <LinearGradient
+            colors={['#0891B2', '#0E7490']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{ borderRadius: 999, paddingVertical: 17, alignItems: 'center' }}
+          >
+            <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: -0.2 }}>
+              {"Let's Go 🚀"}
+            </Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </Animated.View>
     </View>
   );
 };
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F4F5FA' },
+  root: { flex: 1, backgroundColor: '#F4F5FA', justifyContent: 'space-between' },
 
-  top: {
+  hero: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: H * 0.09,
-    paddingBottom: 20,
+    paddingHorizontal: 24,
+    paddingBottom: 32,
+    overflow: 'hidden',
   },
   logoCircle: {
     position: 'absolute',
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: '#fff',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 10,
-    borderWidth: 1,
-    borderColor: '#EDE9FE',
-  },
-  tagline: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    fontWeight: '500',
-    letterSpacing: 0.3,
-    marginTop: 8,
   },
 
-  cards: { flex: 1, paddingHorizontal: 20, gap: 12 },
+  cards: { paddingHorizontal: 20, gap: 8 },
 
   card: {
     backgroundColor: '#fff',
     borderRadius: 20,
-    padding: 22,
-    shadowColor: '#7C3AED',
+    padding: 16,
+    shadowColor: '#0891B2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.07,
     shadowRadius: 16,
     elevation: 4,
     borderWidth: 1,
-    borderColor: '#F0EEFF',
+    borderColor: '#E0F7FA',
   },
   cardBar: { height: 3, borderRadius: 3, marginBottom: 18 },
 
   labelSmall: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#7C3AED',
+    color: '#0891B2',
     letterSpacing: 1.2,
     marginBottom: 8,
   },
@@ -376,7 +395,7 @@ const s = StyleSheet.create({
   },
 
   statItem: { flex: 1, alignItems: 'center', gap: 3 },
-  statDivider: { width: 1, backgroundColor: '#F0EEFF', marginVertical: 4 },
+  statDivider: { width: 1, backgroundColor: '#E0F7FA', marginVertical: 4 },
   statEmoji: { fontSize: 20 },
   statValue: { fontSize: 13, fontWeight: '700', color: '#0F0F1A' },
   statLabel: { fontSize: 10, color: '#9CA3AF', fontWeight: '600', letterSpacing: 0.5 },

@@ -13,6 +13,7 @@ export type RootStackParamList = {
   ExerciseLibrary: undefined;
   BarcodeScanner: undefined;
   Paywall: undefined;
+  PremiumWelcome: { plan: 'monthly' | 'yearly' };
   WorkoutPrograms: undefined;
   WeeklyReport: undefined;
 };

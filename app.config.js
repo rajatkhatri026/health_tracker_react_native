@@ -43,9 +43,14 @@ module.exports = {
       favicon: './assets/favicon.png',
     },
 
+    scheme: 'nexara',
     plugins: [
-      '@react-native-firebase/app',
-      '@react-native-firebase/auth',
+      [
+        '@react-native-google-signin/google-signin',
+        {
+          iosUrlScheme: 'com.googleusercontent.apps.947492576252-id2kb9qn728o7mnlfemt439psbr11qt1',
+        },
+      ],
       [
         'expo-build-properties',
         {
@@ -79,13 +84,7 @@ module.exports = {
           healthUpdatePermission: 'Allow Nexara to update your health data',
         },
       ],
-      [
-        '@stripe/stripe-react-native',
-        {
-          merchantIdentifier: 'merchant.com.nexara',
-          enableGooglePay: true,
-        },
-      ],
+
     ],
   },
 };

@@ -33,8 +33,8 @@ const PROTOCOLS = [
     eatHours: 8,
     title: 'LeanGains',
     desc: 'Fast 16h · Eat 8h · Most popular protocol',
-    color: '#7C3AED',
-    grad: ['#7C3AED', '#4F46E5'] as const,
+    color: '#0891B2',
+    grad: ['#0891B2', '#0E7490'] as const,
   },
   {
     id: '18:6',
@@ -54,7 +54,7 @@ const PROTOCOLS = [
     title: 'Aggressive',
     desc: 'Fast 20h · Eat 4h · Advanced practitioners',
     color: '#8B5CF6',
-    grad: ['#8B5CF6', '#7C3AED'] as const,
+    grad: ['#8B5CF6', '#0891B2'] as const,
   },
   {
     id: 'OMAD',
@@ -166,7 +166,7 @@ const FastingTimerScreen: React.FC = () => {
     elapsed < targetMs * 0.5
       ? { label: 'Fat Burning Phase', color: '#F59E0B', icon: '🔥' }
       : elapsed < targetMs * 0.75
-        ? { label: 'Ketosis Entering', color: '#7C3AED', icon: '⚡' }
+        ? { label: 'Ketosis Entering', color: '#0891B2', icon: '⚡' }
         : { label: 'Deep Ketosis', color: '#10B981', icon: '🌟' };
 
   const startFast = async () => {
@@ -296,7 +296,7 @@ const FastingTimerScreen: React.FC = () => {
               cx={RING_SIZE / 2}
               cy={RING_SIZE / 2}
               r={R}
-              stroke="#EDE9FE"
+              stroke="#E0F7FA"
               strokeWidth={RING_STROKE}
               fill="none"
             />
@@ -508,7 +508,7 @@ const s = StyleSheet.create({
     height: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#7C3AED',
+    shadowColor: '#0891B2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -541,7 +541,7 @@ const ss = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   sciIcon: { fontSize: 20, width: 28, textAlign: 'center' },
-  sciTime: { fontSize: 11, fontWeight: '800', color: '#7C3AED' },
+  sciTime: { fontSize: 11, fontWeight: '800', color: '#0891B2' },
   sciEvent: { fontSize: 12, color: COLORS.textSub, marginTop: 1 },
 });
 

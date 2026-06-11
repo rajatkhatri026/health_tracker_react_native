@@ -51,7 +51,7 @@ const LegalModal: React.FC<LegalModalProps> = ({
           </View>
           <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
             <LinearGradient
-              colors={['#7C3AED', '#0891B2']}
+              colors={['#0891B2', '#0891B2']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={s.doneBtn}
@@ -140,7 +140,7 @@ const s = StyleSheet.create({
     borderColor: COLORS.border,
     padding: 18,
     marginBottom: 12,
-    shadowColor: '#7C3AED',
+    shadowColor: '#0891B2',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -156,12 +156,12 @@ const s = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#0891B2',
   },
   heading: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#7C3AED',
+    color: '#0891B2',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     flex: 1,

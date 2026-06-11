@@ -33,6 +33,10 @@ export const uploadAvatar = async (
   return data;
 };
 
+export const deleteAccount = async (userId: string): Promise<void> => {
+  await api.delete(`/users/${userId}`);
+};
+
 export const deleteAvatar = async (userId: string): Promise<void> => {
   try {
     await api.delete(`/users/${userId}/profile/avatar`);

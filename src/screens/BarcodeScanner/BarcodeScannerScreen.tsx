@@ -16,6 +16,8 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../../context/AuthContext';
+import { addMeal } from '../../api/local';
 import { COLORS, RADIUS } from '../../utils/theme';
 
 const { width: W, height: H } = Dimensions.get('window');
@@ -67,7 +69,7 @@ async function fetchProduct(barcode: string): Promise<FoodProduct | null> {
 
 const MACROS = [
   { key: 'calories', label: 'Calories', unit: 'kcal', color: '#EF4444', bg: '#FEF2F2' },
-  { key: 'protein', label: 'Protein', unit: 'g', color: '#7C3AED', bg: '#EDE9FE' },
+  { key: 'protein', label: 'Protein', unit: 'g', color: '#0891B2', bg: '#E0F7FA' },
   { key: 'carbs', label: 'Carbs', unit: 'g', color: '#F59E0B', bg: '#FEF3C7' },
   { key: 'fat', label: 'Fat', unit: 'g', color: '#06B6D4', bg: '#ECFEFF' },
   { key: 'fiber', label: 'Fiber', unit: 'g', color: '#10B981', bg: '#ECFDF5' },
@@ -77,6 +79,7 @@ const MACROS = [
 export default function BarcodeScannerScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const { user } = useAuth();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -153,7 +156,7 @@ export default function BarcodeScannerScreen() {
         </Text>
         <TouchableOpacity style={styles.permBtn} onPress={requestPermission} activeOpacity={0.88}>
           <LinearGradient
-            colors={['#7C3AED', '#4F46E5']}
+            colors={['#0891B2', '#0E7490']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.permBtnGrad}
@@ -255,7 +258,7 @@ export default function BarcodeScannerScreen() {
 
           {/* Product header */}
           <View style={styles.productHeader}>
-            <LinearGradient colors={['#7C3AED22', '#4F46E511']} style={styles.productIconBg}>
+            <LinearGradient colors={['#0891B222', '#0E749011']} style={styles.productIconBg}>
               <Text style={{ fontSize: 36 }}>🍎</Text>
             </LinearGradient>
             <View style={{ flex: 1, marginLeft: 14 }}>
@@ -302,13 +305,28 @@ export default function BarcodeScannerScreen() {
             <TouchableOpacity
               style={styles.logBtn}
               activeOpacity={0.88}
-              onPress={() => {
-                Alert.alert('Logged!', `${product.name} added to today\'s calories.`);
-                navigation.goBack();
+              onPress={async () => {
+                if (!user || !product) return;
+                try {
+                  await addMeal(user.user_id, {
+                    name: product.name,
+                    calories: product.calories,
+                    protein: product.protein,
+                    carbs: product.carbs,
+                    fat: product.fat,
+                    category: 'snack',
+                    emoji: '🍱',
+                  });
+                  Alert.alert('Logged!', `${product.name} added to today's calories.`, [
+                    { text: 'OK', onPress: () => navigation.goBack() },
+                  ]);
+                } catch {
+                  Alert.alert('Error', 'Failed to log food. Please try again.');
+                }
               }}
             >
               <LinearGradient
-                colors={['#7C3AED', '#4F46E5']}
+                colors={['#0891B2', '#0E7490']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.logBtnGrad}
@@ -381,11 +399,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  corner: { position: 'absolute', width: 28, height: 28, borderColor: '#7C3AED' },
+  corner: { position: 'absolute', width: 28, height: 28, borderColor: '#0891B2' },
   scanLine: {
     width: FRAME - 20,
     height: 2,
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#0891B2',
     opacity: 0.8,
     borderRadius: 1,
   },
@@ -441,7 +459,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#EDE9FE',
+    borderColor: '#E0F7FA',
   },
   productName: {
     fontSize: 16,

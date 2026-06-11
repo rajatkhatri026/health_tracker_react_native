@@ -334,12 +334,12 @@ export const SkeletonHeroCard: React.FC<{ style?: ViewStyle }> = ({ style }) => 
         backgroundColor: '#FFFFFF',
         borderRadius: RADIUS.xl,
         borderWidth: 1,
-        borderColor: '#EDE9FE',
+        borderColor: '#E0F7FA',
         padding: 22,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        shadowColor: '#7C3AED',
+        shadowColor: '#0891B2',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.07,
         shadowRadius: 16,
@@ -479,7 +479,7 @@ export const SkeletonBodyStats: React.FC<{ style?: ViewStyle }> = ({ style }) =>
           backgroundColor: '#FFFFFF',
           padding: 16,
           alignItems: 'center',
-          shadowColor: '#7C3AED',
+          shadowColor: '#0891B2',
           shadowOffset: { width: 0, height: 3 },
           shadowOpacity: 0.06,
           shadowRadius: 10,
@@ -508,7 +508,7 @@ export const SkeletonMenuSection: React.FC<{ items?: number; style?: ViewStyle }
         borderWidth: 1,
         borderColor: '#E4E7F0',
         overflow: 'hidden',
-        shadowColor: '#7C3AED',
+        shadowColor: '#0891B2',
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.05,
         shadowRadius: 10,
@@ -738,7 +738,6 @@ export const SkeletonWaterHeader: React.FC<{ style?: ViewStyle }> = ({ style }) 
 );
 
 // ── Full Dashboard skeleton ───────────────────────────────────────────────────
-// Mirrors every section of DashboardScreen's ScrollView content exactly.
 export const DashboardSkeleton: React.FC = () => (
   <View style={{ paddingHorizontal: 20, paddingBottom: 110 }}>
     <StatusBar barStyle="dark-content" />
@@ -748,13 +747,13 @@ export const DashboardSkeleton: React.FC = () => (
         backgroundColor: '#FFFFFF',
         borderRadius: RADIUS.xl,
         borderWidth: 1,
-        borderColor: '#EDE9FE',
+        borderColor: '#E0F7FA',
         marginTop: 20,
         padding: 22,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        shadowColor: '#7C3AED',
+        shadowColor: '#0891B2',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.07,
         shadowRadius: 16,
@@ -919,209 +918,191 @@ export const DashboardSkeleton: React.FC = () => (
 );
 
 // ── WorkoutSkeleton ───────────────────────────────────────────────────────────
-// Mirrors: header gradient (title + week nav + week chart) + stats row + tabs + list items
 export const WorkoutSkeleton: React.FC = () => (
-  <View style={{ flex: 1, backgroundColor: '#F4F5FA' }}>
-    <StatusBar barStyle="dark-content" />
-    {/* Header area */}
-    <View
-      style={{
-        backgroundColor: '#EEF0FF',
-        paddingTop: 56,
-        paddingHorizontal: 24,
-        paddingBottom: 28,
-        borderBottomLeftRadius: 32,
-        borderBottomRightRadius: 32,
-      }}
-    >
-      {/* Title row */}
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 20,
-        }}
-      >
-        <Skeleton width={140} height={18} borderRadius={9} />
-        <Skeleton width={40} height={40} borderRadius={12} />
-      </View>
-      {/* Week nav */}
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 14,
-        }}
-      >
-        <Skeleton width={32} height={32} borderRadius={10} />
-        <Skeleton width={120} height={12} borderRadius={6} />
-        <Skeleton width={32} height={32} borderRadius={10} />
-      </View>
-      {/* Week chart */}
-      <View style={{ flexDirection: 'row', gap: 4 }}>
-        {WEEK_CHART_HEIGHTS.map((barH, i) => (
-          <View key={i} style={{ flex: 1, alignItems: 'center' }}>
-            <Skeleton width={20} height={10} borderRadius={5} style={{ marginBottom: 3 }} />
-            <Skeleton width={30} height={30} borderRadius={15} style={{ marginBottom: 6 }} />
-            <View style={{ width: '80%', height: 44, justifyContent: 'flex-end' }}>
-              <Skeleton width="100%" height={barH} borderRadius={4} />
-            </View>
+  <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+    <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+    <GradientHero>
+      {/* Week bar chart preview */}
+      <View style={{ flexDirection: 'row', gap: 5, alignItems: 'flex-end', height: 70 }}>
+        {[55, 80, 40, 100, 65, 90, 50].map((h, i) => (
+          <View key={i} style={{ flex: 1, justifyContent: 'flex-end' }}>
+            <View
+              style={{
+                width: '100%',
+                height: Math.max(4, (h / 100) * 60),
+                borderRadius: 5,
+                backgroundColor: 'rgba(255,255,255,0.2)',
+              }}
+            />
           </View>
         ))}
       </View>
-    </View>
-
-    {/* Stats row */}
-    <View style={{ flexDirection: 'row', gap: 10, marginTop: 20, paddingHorizontal: 20 }}>
-      {[1, 2, 3].map((i) => (
-        <View
-          key={i}
-          style={{
-            flex: 1,
-            backgroundColor: COLORS.bgCard,
-            borderRadius: RADIUS.lg,
-            borderWidth: 1,
-            borderColor: COLORS.border,
-            padding: 14,
-            alignItems: 'center',
-          }}
-        >
-          <Skeleton width={40} height={20} borderRadius={10} style={{ marginBottom: 6 }} />
-          <Skeleton width={50} height={10} borderRadius={5} />
-          <Skeleton width={35} height={10} borderRadius={5} style={{ marginTop: 3 }} />
-        </View>
-      ))}
-    </View>
-
-    {/* Tabs */}
-    <View
-      style={{
-        flexDirection: 'row',
-        gap: 10,
-        marginTop: 24,
-        paddingHorizontal: 20,
-        marginBottom: 16,
-      }}
-    >
-      <Skeleton width="50%" height={40} borderRadius={RADIUS.full} />
-      <Skeleton width="50%" height={40} borderRadius={RADIUS.full} />
-    </View>
-
-    {/* List items */}
-    <View style={{ paddingHorizontal: 20 }}>
-      <SkeletonListItem style={{ marginBottom: 12 }} />
-      <SkeletonListItem style={{ marginBottom: 12 }} />
-      <SkeletonListItem style={{ marginBottom: 12 }} />
-    </View>
-  </View>
-);
-
-// ── ProfileSkeleton ───────────────────────────────────────────────────────────
-// Mirrors: decorative bg + hero avatar/name/pills/button + body stats + info card + menu sections
-export const ProfileSkeleton: React.FC = () => (
-  <View style={{ flex: 1, backgroundColor: '#F4F5FA' }}>
-    <StatusBar barStyle="dark-content" />
-    {/* Hero */}
-    <View
-      style={{ alignItems: 'center', paddingTop: 70, paddingBottom: 36, paddingHorizontal: 24 }}
-    >
-      {/* Avatar rings */}
-      <View
-        style={{
-          width: 120,
-          height: 120,
-          borderRadius: 60,
-          borderWidth: 1,
-          borderColor: '#DDD6FE',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: 20,
-        }}
-      >
-        <View
-          style={{
-            width: 108,
-            height: 108,
-            borderRadius: 54,
-            borderWidth: 1,
-            borderColor: '#C4B5FD',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <SkeletonCircle size={96} />
-        </View>
-      </View>
-      <Skeleton width={160} height={26} borderRadius={13} style={{ marginBottom: 8 }} />
-      <Skeleton width={160} height={14} borderRadius={7} style={{ marginBottom: 14 }} />
-      {/* Pills */}
-      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
-        <Skeleton width={70} height={28} borderRadius={14} />
-        <Skeleton width={90} height={28} borderRadius={14} />
-        <Skeleton width={55} height={28} borderRadius={14} />
-      </View>
-      <Skeleton width={140} height={44} borderRadius={22} />
-    </View>
-
-    {/* Body */}
-    <View style={{ paddingHorizontal: 20 }}>
-      <Skeleton width={80} height={12} borderRadius={6} style={{ marginBottom: 12 }} />
-      <SkeletonBodyStats />
-      <Skeleton width={100} height={12} borderRadius={6} style={{ marginBottom: 12 }} />
-      <SkeletonMenuSection items={4} style={{ marginBottom: 24 }} />
-      <SkeletonMenuSection items={2} style={{ marginBottom: 24 }} />
-      <SkeletonMenuSection items={3} style={{ marginBottom: 24 }} />
-    </View>
-  </View>
-);
-
-// ── GoalsSkeleton ─────────────────────────────────────────────────────────────
-// Mirrors: dark header + stats row + goal cards list (light bg theme)
-export const GoalsSkeleton: React.FC = () => (
-  <View style={{ flex: 1, backgroundColor: '#F4F5FA' }}>
-    <StatusBar barStyle="dark-content" />
-    {/* Header */}
-    <View
-      style={{
-        backgroundColor: '#F4F5FA',
-        paddingTop: 56,
-        paddingBottom: 16,
-        paddingHorizontal: 24,
-      }}
-    >
-      <Skeleton width={100} height={26} borderRadius={13} style={{ marginBottom: 6 }} />
-      <Skeleton width={180} height={13} borderRadius={6} />
-    </View>
-
-    <View style={{ paddingHorizontal: 20 }}>
+    </GradientHero>
+    <View style={{ paddingHorizontal: 20, paddingTop: 20, gap: 12, marginTop: HERO_H }}>
       {/* Stats row */}
-      <View style={{ flexDirection: 'row', gap: 12, marginVertical: 16 }}>
+      <View style={{ flexDirection: 'row', gap: 10 }}>
         {[1, 2, 3].map((i) => (
           <View
             key={i}
             style={{
               flex: 1,
               backgroundColor: '#fff',
-              borderRadius: 18,
-              padding: 16,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: COLORS.border,
+              padding: 14,
               alignItems: 'center',
-              shadowColor: '#6C63FF',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.08,
-              shadowRadius: 12,
-              elevation: 3,
+              gap: 5,
             }}
           >
-            <SkeletonLight width={40} height={40} borderRadius={13} style={{ marginBottom: 8 }} />
-            <SkeletonLight width={28} height={24} borderRadius={12} style={{ marginBottom: 4 }} />
-            <SkeletonLight width={44} height={10} borderRadius={5} />
+            <Skeleton width={40} height={22} borderRadius={11} />
+            <Skeleton width={55} height={10} borderRadius={5} />
           </View>
         ))}
       </View>
+      <SkeletonListItem />
+      <SkeletonListItem />
+      <SkeletonListItem />
+    </View>
+  </View>
+);
 
-      {/* Goal cards */}
+// ── ProfileSkeleton ───────────────────────────────────────────────────────────
+export const ProfileSkeleton: React.FC = () => (
+  <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+    <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+    {/* Hero — gradient with avatar centred */}
+    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: HERO_H, zIndex: 10 }}>
+      <LinearGradient
+        colors={['#0C2340', '#0891B2']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{
+          height: HERO_H,
+          paddingTop: 56,
+          paddingHorizontal: 20,
+          paddingBottom: 20,
+          borderBottomLeftRadius: 32,
+          borderBottomRightRadius: 32,
+          overflow: 'hidden',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        {/* Top row */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+          }}
+        >
+          <View
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 12,
+              backgroundColor: 'rgba(255,255,255,0.15)',
+            }}
+          />
+          <View
+            style={{
+              width: 120,
+              height: 16,
+              borderRadius: 8,
+              backgroundColor: 'rgba(255,255,255,0.2)',
+            }}
+          />
+          <View
+            style={{
+              width: 70,
+              height: 30,
+              borderRadius: 15,
+              backgroundColor: 'rgba(255,255,255,0.15)',
+            }}
+          />
+        </View>
+        {/* Avatar + name */}
+        <View style={{ alignItems: 'center', gap: 8 }}>
+          <View
+            style={{
+              width: 96,
+              height: 96,
+              borderRadius: 48,
+              backgroundColor: 'rgba(255,255,255,0.15)',
+              borderWidth: 2,
+              borderColor: 'rgba(255,255,255,0.3)',
+            }}
+          />
+          <View
+            style={{
+              width: 130,
+              height: 16,
+              borderRadius: 8,
+              backgroundColor: 'rgba(255,255,255,0.2)',
+            }}
+          />
+          {/* Pills */}
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            {[60, 80, 60, 70].map((w, i) => (
+              <View
+                key={i}
+                style={{
+                  width: w,
+                  height: 24,
+                  borderRadius: 12,
+                  backgroundColor: 'rgba(255,255,255,0.15)',
+                }}
+              />
+            ))}
+          </View>
+        </View>
+        {/* Edit button */}
+        <View
+          style={{
+            width: 140,
+            height: 38,
+            borderRadius: 19,
+            backgroundColor: 'rgba(255,255,255,0.18)',
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.3)',
+          }}
+        />
+      </LinearGradient>
+    </View>
+    <ScrollView
+      style={{ marginTop: HERO_H }}
+      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 80, gap: 20 }}
+    >
+      <SkeletonMenuSection items={3} />
+      <SkeletonMenuSection items={2} />
+      <SkeletonMenuSection items={3} />
+    </ScrollView>
+  </View>
+);
+
+// ── GoalsSkeleton ─────────────────────────────────────────────────────────────
+export const GoalsSkeleton: React.FC = () => (
+  <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+    <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+    <GradientHero>
+      {/* 3 stat chips */}
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        {[1, 2, 3].map((i) => (
+          <View
+            key={i}
+            style={{
+              flex: 1,
+              height: 56,
+              borderRadius: 14,
+              backgroundColor: 'rgba(255,255,255,0.12)',
+            }}
+          />
+        ))}
+      </View>
+    </GradientHero>
+    <View style={{ paddingHorizontal: 20, paddingTop: 20, gap: 12, marginTop: HERO_H }}>
       <SkeletonGoalCard />
       <SkeletonGoalCard />
       <SkeletonGoalCard />
@@ -1130,647 +1111,419 @@ export const GoalsSkeleton: React.FC = () => (
 );
 
 // ── MetricsSkeleton ───────────────────────────────────────────────────────────
-// Mirrors: dark header + filter chips row + chart card + list items (light bg)
 export const MetricsSkeleton: React.FC = () => (
-  <View style={{ flex: 1, backgroundColor: '#F4F5FA' }}>
-    <StatusBar barStyle="dark-content" />
-    {/* Header */}
-    <View
-      style={{
-        backgroundColor: '#F4F5FA',
-        paddingTop: 56,
-        paddingBottom: 16,
-        paddingHorizontal: 24,
-      }}
-    >
-      <Skeleton width={90} height={26} borderRadius={13} style={{ marginBottom: 6 }} />
-      <Skeleton width={180} height={13} borderRadius={6} />
-    </View>
-
-    <View style={{ paddingHorizontal: 16 }}>
-      {/* Filter chips */}
-      <View style={{ flexDirection: 'row', gap: 8, marginVertical: 16 }}>
+  <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+    <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+    <GradientHero>
+      {/* Filter chips row */}
+      <View style={{ flexDirection: 'row', gap: 8 }}>
         {[60, 80, 70, 90, 65].map((w, i) => (
-          <SkeletonLight key={i} width={w} height={34} borderRadius={17} />
+          <View
+            key={i}
+            style={{
+              width: w,
+              height: 32,
+              borderRadius: 16,
+              backgroundColor: 'rgba(255,255,255,0.15)',
+            }}
+          />
         ))}
       </View>
-
-      {/* Chart card */}
-      <SkeletonChart height={180} style={{ marginBottom: 16 }} />
-
-      {/* List title */}
-      <SkeletonLight width={60} height={14} borderRadius={7} style={{ marginBottom: 12 }} />
-
-      {/* List items */}
-      {Array.from({ length: 5 }).map((_, i) => (
-        <View
-          key={i}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            backgroundColor: '#fff',
-            borderRadius: 14,
-            padding: 14,
-            marginBottom: 10,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.04,
-            shadowRadius: 6,
-            elevation: 2,
-          }}
-        >
-          <SkeletonLight width={44} height={44} borderRadius={12} style={{ marginRight: 12 }} />
-          <View style={{ flex: 1 }}>
-            <SkeletonLight width="60%" height={14} borderRadius={7} />
-            <SkeletonLight width="40%" height={10} borderRadius={5} style={{ marginTop: 4 }} />
-          </View>
-          <SkeletonLight width={40} height={18} borderRadius={9} />
-        </View>
+    </GradientHero>
+    <View style={{ paddingHorizontal: 20, paddingTop: 20, gap: 12, marginTop: HERO_H }}>
+      <ContentCard height={160} bars={7} />
+      {[1, 2, 3, 4, 5].map((i) => (
+        <SkeletonListItem key={i} />
       ))}
     </View>
   </View>
 );
 
-// ── StepsSkeleton ─────────────────────────────────────────────────────────────
-// Mirrors: dark gradient header (title + big ring + goal row) + stats cards + bar chart card + goal setter
-export const StepsSkeleton: React.FC = () => (
-  <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
-    <StatusBar barStyle="dark-content" />
-    {/* Header */}
-    <View
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared hero skeleton helpers — match the fixed 280px #0C2340→#0891B2 gradient
+// hero used on all tracker screens.
+// ─────────────────────────────────────────────────────────────────────────────
+const HERO_H = 280;
+
+const SkeletonFrost: React.FC<{ size?: number; borderRadius?: number; style?: ViewStyle }> = ({
+  size = 120,
+  borderRadius = 14,
+  style,
+}) => (
+  <View
+    style={[
+      {
+        width: size,
+        height: size,
+        borderRadius,
+        backgroundColor: 'rgba(255,255,255,0.12)',
+        overflow: 'hidden',
+      },
+      style,
+    ]}
+  >
+    <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.06)' }} />
+  </View>
+);
+
+const SkeletonChip: React.FC<{ wide?: boolean }> = ({ wide }) => (
+  <View
+    style={{
+      backgroundColor: 'rgba(255,255,255,0.12)',
+      borderRadius: 10,
+      height: 42,
+      width: wide ? '100%' : '100%',
+    }}
+  />
+);
+
+const GradientHero: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
+  <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: HERO_H, zIndex: 10 }}>
+    <LinearGradient
+      colors={['#0C2340', '#0891B2']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
       style={{
-        backgroundColor: COLORS.bg,
+        height: HERO_H,
         paddingTop: 56,
-        paddingHorizontal: 24,
-        paddingBottom: 32,
+        paddingHorizontal: 20,
+        paddingBottom: 20,
         borderBottomLeftRadius: 32,
         borderBottomRightRadius: 32,
+        overflow: 'hidden',
+        justifyContent: 'space-between',
       }}
     >
-      <Skeleton width={130} height={18} borderRadius={9} style={{ marginBottom: 24 }} />
-      {/* Big ring */}
-      <View style={{ alignItems: 'center', marginBottom: 12 }}>
-        <SkeletonRing size={220} />
+      {/* Top row */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 12,
+            backgroundColor: 'rgba(255,255,255,0.15)',
+          }}
+        />
+        <View
+          style={{
+            width: 120,
+            height: 16,
+            borderRadius: 8,
+            backgroundColor: 'rgba(255,255,255,0.2)',
+          }}
+        />
+        <View
+          style={{
+            width: 60,
+            height: 30,
+            borderRadius: 15,
+            backgroundColor: 'rgba(255,255,255,0.15)',
+          }}
+        />
       </View>
-      {/* Goal row */}
-      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8 }}>
-        <Skeleton width={70} height={13} borderRadius={6} />
-        <Skeleton width={90} height={13} borderRadius={6} />
+      {/* Content slot */}
+      {children}
+      {/* Bottom tab switcher */}
+      <View
+        style={{
+          flexDirection: 'row',
+          backgroundColor: 'rgba(0,0,0,0.2)',
+          borderRadius: 12,
+          padding: 3,
+          gap: 3,
+        }}
+      >
+        <View
+          style={{
+            flex: 1,
+            height: 34,
+            borderRadius: 9,
+            backgroundColor: 'rgba(255,255,255,0.18)',
+          }}
+        />
+        <View style={{ flex: 1, height: 34, borderRadius: 9 }} />
       </View>
-    </View>
+    </LinearGradient>
+  </View>
+);
 
-    <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
-      {/* Weekly stats row */}
-      <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
-        {[1, 2, 3].map((i) => (
-          <View
-            key={i}
-            style={{
-              flex: 1,
-              backgroundColor: COLORS.bgCard,
-              borderRadius: RADIUS.lg,
-              borderWidth: 1,
-              borderColor: COLORS.border,
-              padding: 14,
-              alignItems: 'center',
-            }}
-          >
-            <Skeleton width={44} height={20} borderRadius={10} style={{ marginBottom: 6 }} />
-            <Skeleton width={55} height={10} borderRadius={5} />
+const ContentCard: React.FC<{ height?: number; bars?: number; chips?: number }> = ({
+  height = 100,
+  bars,
+  chips,
+}) => (
+  <View
+    style={{
+      backgroundColor: '#fff',
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      padding: 16,
+      height,
+      shadowColor: '#0891B2',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.05,
+      shadowRadius: 12,
+      elevation: 3,
+    }}
+  >
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+      <Skeleton width={100} height={13} borderRadius={6} />
+      <Skeleton width={50} height={22} borderRadius={11} />
+    </View>
+    {bars && (
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 5, flex: 1 }}>
+        {[55, 80, 40, 100, 65, 90, 50].slice(0, bars).map((h, i) => (
+          <View key={i} style={{ flex: 1, justifyContent: 'flex-end' }}>
+            <Skeleton
+              width="100%"
+              height={Math.max(4, (h / 100) * (height - 55))}
+              borderRadius={5}
+            />
           </View>
         ))}
       </View>
+    )}
+    {chips && (
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+        {Array.from({ length: chips }).map((_, i) => (
+          <Skeleton key={i} width={64} height={32} borderRadius={RADIUS.full} />
+        ))}
+      </View>
+    )}
+  </View>
+);
 
-      {/* Bar chart card */}
-      <View
-        style={{
-          backgroundColor: COLORS.bgCard,
-          borderRadius: RADIUS.lg,
-          borderWidth: 1,
-          borderColor: COLORS.border,
-          padding: 16,
-          marginBottom: 20,
-        }}
-      >
-        <Skeleton width={80} height={13} borderRadius={6} style={{ marginBottom: 16 }} />
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 156 }}>
-          {[55, 80, 35, 100, 65, 90, 45].map((h, i) => (
-            <View key={i} style={{ flex: 1, justifyContent: 'flex-end' }}>
-              <Skeleton width="100%" height={(h / 100) * 120} borderRadius={6} />
-            </View>
+// ── StepsSkeleton ─────────────────────────────────────────────────────────────
+export const StepsSkeleton: React.FC = () => (
+  <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+    <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+    <GradientHero>
+      {/* Ring left + 3 chips right */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+        <SkeletonFrost size={160} borderRadius={80} />
+        <View style={{ flex: 1, gap: 8 }}>
+          {[1, 2, 3].map((i) => (
+            <SkeletonChip key={i} />
           ))}
         </View>
       </View>
-
-      {/* Goal setter card */}
-      <View
-        style={{
-          backgroundColor: COLORS.bgCard,
-          borderRadius: RADIUS.lg,
-          borderWidth: 1,
-          borderColor: COLORS.border,
-          padding: 16,
-        }}
-      >
-        <Skeleton width={80} height={13} borderRadius={6} style={{ marginBottom: 14 }} />
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Skeleton key={i} width={70} height={34} borderRadius={RADIUS.full} />
-          ))}
-        </View>
-      </View>
+    </GradientHero>
+    <View style={{ paddingHorizontal: 20, paddingTop: 20, gap: 14, marginTop: HERO_H }}>
+      <ContentCard height={110} bars={7} />
+      <ContentCard height={90} chips={6} />
     </View>
   </View>
 );
 
 // ── SleepSkeleton ─────────────────────────────────────────────────────────────
-// Mirrors: header row + bedtime/wake summary card + stats row + weekly chart card + alarm list
 export const SleepSkeleton: React.FC = () => (
   <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
-    <StatusBar barStyle="dark-content" />
-    {/* Header */}
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingTop: 56,
-        paddingHorizontal: 24,
-        paddingBottom: 16,
-      }}
-    >
-      <View>
-        <Skeleton width={140} height={22} borderRadius={11} style={{ marginBottom: 6 }} />
-        <Skeleton width={180} height={12} borderRadius={6} />
-      </View>
-      <Skeleton width={100} height={36} borderRadius={20} />
-    </View>
-
-    <View style={{ paddingHorizontal: 20 }}>
-      {/* Bedtime / Wake summary card */}
-      <View
-        style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: RADIUS.xl,
-          borderWidth: 1,
-          borderColor: '#EDE9FE',
-          padding: 20,
-          flexDirection: 'row',
-          alignItems: 'center',
-          marginBottom: 12,
-          shadowColor: '#7C3AED',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.07,
-          shadowRadius: 14,
-          elevation: 3,
-        }}
-      >
-        <View style={{ flex: 1, alignItems: 'center' }}>
-          <Skeleton width={36} height={36} borderRadius={10} style={{ marginBottom: 6 }} />
-          <Skeleton width={50} height={9} borderRadius={5} style={{ marginBottom: 4 }} />
-          <Skeleton width={70} height={20} borderRadius={10} />
+    <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+    <GradientHero>
+      {/* Bedtime / Wake / Duration chips */}
+      <View style={{ gap: 8 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          <SkeletonFrost size={110} borderRadius={14} />
+          <SkeletonFrost size={110} borderRadius={14} />
         </View>
-        <View style={{ alignItems: 'center', paddingHorizontal: 12 }}>
-          <Skeleton width={60} height={30} borderRadius={15} style={{ marginBottom: 4 }} />
-          <Skeleton width={40} height={10} borderRadius={5} />
-        </View>
-        <View style={{ flex: 1, alignItems: 'center' }}>
-          <Skeleton width={36} height={36} borderRadius={10} style={{ marginBottom: 6 }} />
-          <Skeleton width={50} height={9} borderRadius={5} style={{ marginBottom: 4 }} />
-          <Skeleton width={70} height={20} borderRadius={10} />
-        </View>
-      </View>
-
-      {/* Stats row */}
-      <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
-        <View
-          style={{
-            flex: 1.5,
-            backgroundColor: '#FFFFFF',
-            borderRadius: RADIUS.xl,
-            borderWidth: 1,
-            borderColor: '#EDE9FE',
-            padding: 14,
-            alignItems: 'center',
-            minHeight: 90,
-            shadowColor: '#7C3AED',
-            shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: 0.06,
-            shadowRadius: 10,
-            elevation: 2,
-          }}
-        >
-          <Skeleton width={60} height={9} borderRadius={5} style={{ marginBottom: 8 }} />
-          <Skeleton width={80} height={24} borderRadius={12} style={{ marginBottom: 4 }} />
-          <Skeleton width={50} height={11} borderRadius={5} />
-        </View>
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: '#FFFFFF',
-            borderRadius: RADIUS.xl,
-            borderWidth: 1,
-            borderColor: '#ECFEFF',
-            padding: 14,
-            alignItems: 'center',
-            minHeight: 90,
-            shadowColor: '#06B6D4',
-            shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: 0.06,
-            shadowRadius: 10,
-            elevation: 2,
-          }}
-        >
-          <Skeleton width={55} height={9} borderRadius={5} style={{ marginBottom: 8 }} />
-          <Skeleton width={50} height={24} borderRadius={12} style={{ marginBottom: 4 }} />
-          <Skeleton width={55} height={11} borderRadius={5} />
-        </View>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <SkeletonRing size={90} />
-        </View>
-      </View>
-
-      {/* Weekly chart card */}
-      <View
-        style={{
-          backgroundColor: COLORS.bgCard,
-          borderRadius: RADIUS.lg,
-          borderWidth: 1,
-          borderColor: COLORS.border,
-          padding: 20,
-          marginBottom: 4,
-        }}
-      >
-        <Skeleton width={100} height={15} borderRadius={7} style={{ marginBottom: 16 }} />
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 80 }}>
-          {[35, 50, 25, 65, 45, 55, 40].map((h, i) => (
-            <View key={i} style={{ flex: 1 }}>
-              <Skeleton width="100%" height={h} borderRadius={4} />
-            </View>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {[1, 2, 3].map((i) => (
+            <View
+              key={i}
+              style={{
+                flex: 1,
+                height: 38,
+                borderRadius: 10,
+                backgroundColor: 'rgba(255,255,255,0.12)',
+              }}
+            />
           ))}
         </View>
       </View>
-
-      {/* Alarms section header */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginTop: 20,
-          marginBottom: 12,
-        }}
-      >
-        <Skeleton width={140} height={15} borderRadius={7} />
-        <Skeleton width={60} height={30} borderRadius={16} />
-      </View>
-
-      {/* Alarm cards */}
-      <SkeletonListItem style={{ marginBottom: 10 }} />
+    </GradientHero>
+    <View style={{ paddingHorizontal: 20, paddingTop: 20, gap: 14, marginTop: HERO_H }}>
+      <ContentCard height={110} bars={7} />
+      <SkeletonListItem style={{ marginBottom: 0 }} />
       <SkeletonListItem />
     </View>
   </View>
 );
 
 // ── CaloriesSkeleton ──────────────────────────────────────────────────────────
-// Mirrors: dark gradient header (title + profile btn + ring) + macro stats + chart card + activity list
 export const CaloriesSkeleton: React.FC = () => (
   <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
-    <StatusBar barStyle="dark-content" />
-    {/* Header */}
-    <View
-      style={{
-        backgroundColor: COLORS.bg,
-        paddingTop: 56,
-        paddingHorizontal: 24,
-        paddingBottom: 32,
-        borderBottomLeftRadius: 32,
-        borderBottomRightRadius: 32,
-      }}
-    >
-      {/* Title + profile btn */}
-      <View
+    <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+    {/* Amber/red gradient hero — matches CaloriesScreen */}
+    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: HERO_H, zIndex: 10 }}>
+      <LinearGradient
+        colors={['#7C2D12', '#F59E0B']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
         style={{
-          flexDirection: 'row',
+          height: HERO_H,
+          paddingTop: 56,
+          paddingHorizontal: 20,
+          paddingBottom: 16,
+          borderBottomLeftRadius: 32,
+          borderBottomRightRadius: 32,
+          overflow: 'hidden',
           justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 24,
         }}
       >
-        <Skeleton width={150} height={18} borderRadius={9} />
-        <Skeleton width={110} height={36} borderRadius={RADIUS.full} />
-      </View>
-      {/* Ring */}
-      <View style={{ alignItems: 'center' }}>
-        <SkeletonRing size={210} />
-      </View>
+        {/* Top row */}
+        <View
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: 5,
+                backgroundColor: 'rgba(255,255,255,0.2)',
+              }}
+            />
+            <View
+              style={{
+                width: 130,
+                height: 16,
+                borderRadius: 8,
+                backgroundColor: 'rgba(255,255,255,0.2)',
+              }}
+            />
+          </View>
+          <View
+            style={{
+              width: 80,
+              height: 30,
+              borderRadius: 15,
+              backgroundColor: 'rgba(255,255,255,0.18)',
+            }}
+          />
+        </View>
+        {/* Ring + chips */}
+        <View
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1, paddingTop: 8 }}
+        >
+          <SkeletonFrost size={130} borderRadius={65} />
+          <View style={{ flex: 1, gap: 7 }}>
+            {[1, 2, 3].map((i) => (
+              <SkeletonChip key={i} />
+            ))}
+          </View>
+        </View>
+      </LinearGradient>
     </View>
-
-    <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
-      {/* Macro stats row */}
-      <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
+    <View style={{ paddingHorizontal: 20, paddingTop: 20, gap: 14, marginTop: HERO_H }}>
+      {/* Breakdown chips */}
+      <View style={{ flexDirection: 'row', gap: 12 }}>
+        <Skeleton width="48%" height={62} borderRadius={16} />
+        <Skeleton width="48%" height={62} borderRadius={16} />
+      </View>
+      {/* Stats row */}
+      <View style={{ flexDirection: 'row', gap: 10 }}>
         {[1, 2, 3].map((i) => (
           <View
             key={i}
             style={{
               flex: 1,
-              backgroundColor: COLORS.bgCard,
-              borderRadius: RADIUS.lg,
+              backgroundColor: '#fff',
+              borderRadius: 14,
               borderWidth: 1,
               borderColor: COLORS.border,
               padding: 14,
               alignItems: 'center',
+              gap: 6,
             }}
           >
-            <Skeleton width={40} height={20} borderRadius={10} style={{ marginBottom: 6 }} />
+            <Skeleton width={40} height={22} borderRadius={11} />
             <Skeleton width={50} height={10} borderRadius={5} />
           </View>
         ))}
       </View>
-
-      {/* Weekly chart card */}
-      <View
-        style={{
-          backgroundColor: COLORS.bgCard,
-          borderRadius: RADIUS.lg,
-          borderWidth: 1,
-          borderColor: COLORS.border,
-          padding: 16,
-          marginBottom: 20,
-        }}
-      >
-        <Skeleton width={80} height={13} borderRadius={6} style={{ marginBottom: 16 }} />
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 140 }}>
-          {[55, 80, 35, 100, 65, 90, 45].map((h, i) => (
-            <View key={i} style={{ flex: 1, justifyContent: 'flex-end' }}>
-              <Skeleton width="100%" height={(h / 100) * 110} borderRadius={6} />
-            </View>
-          ))}
-        </View>
-      </View>
-
-      {/* Activity list */}
-      <Skeleton width={120} height={13} borderRadius={6} style={{ marginBottom: 12 }} />
-      <SkeletonListItem style={{ marginBottom: 12 }} />
-      <SkeletonListItem style={{ marginBottom: 12 }} />
-      <SkeletonListItem />
+      <ContentCard height={140} bars={7} />
     </View>
   </View>
 );
 
 // ── MealPlannerSkeleton ───────────────────────────────────────────────────────
-// Mirrors: header + macro card + category cards + filter chips + meal list
 export const MealPlannerSkeleton: React.FC = () => (
   <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
-    <StatusBar barStyle="dark-content" />
-    {/* Header */}
-    <View style={{ paddingTop: 56, paddingHorizontal: 24, paddingBottom: 16 }}>
-      <Skeleton width={120} height={17} borderRadius={8} />
-    </View>
-
-    <View style={{ paddingHorizontal: 20 }}>
-      {/* Macro progress card */}
-      <View
-        style={{
-          backgroundColor: COLORS.bgCard,
-          borderRadius: RADIUS.lg,
-          borderWidth: 1,
-          borderColor: COLORS.border,
-          padding: 18,
-          marginBottom: 16,
-        }}
-      >
-        <Skeleton width={130} height={14} borderRadius={7} style={{ marginBottom: 16 }} />
-        {Array.from({ length: 4 }).map((_, i) => (
-          <View key={i} style={{ marginBottom: 12 }}>
-            <View
-              style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}
-            >
-              <Skeleton width={70} height={12} borderRadius={6} />
-              <Skeleton width={60} height={12} borderRadius={6} />
-            </View>
-            <Skeleton width="100%" height={6} borderRadius={3} />
-          </View>
-        ))}
+    <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+    <GradientHero>
+      {/* Ring + GOAL/EATEN/REMAINING chips */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+        <SkeletonFrost size={118} borderRadius={59} />
+        <View style={{ flex: 1, gap: 7 }}>
+          {[1, 2, 3].map((i) => (
+            <SkeletonChip key={i} />
+          ))}
+        </View>
       </View>
-
-      {/* Category grid */}
-      <Skeleton width={100} height={14} borderRadius={7} style={{ marginBottom: 12 }} />
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
-        {[1, 2, 3, 4].map((i) => (
+    </GradientHero>
+    <View style={{ paddingHorizontal: 20, paddingTop: 20, gap: 14, marginTop: HERO_H }}>
+      {/* Macro cards */}
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        {[1, 2, 3].map((i) => (
           <View
             key={i}
             style={{
-              width: '47%',
-              backgroundColor: COLORS.bgCard,
-              borderRadius: RADIUS.lg,
+              flex: 1,
+              backgroundColor: '#fff',
+              borderRadius: 16,
               borderWidth: 1,
               borderColor: COLORS.border,
-              padding: 16,
+              padding: 12,
+              alignItems: 'center',
+              gap: 5,
             }}
           >
-            <Skeleton width={40} height={40} borderRadius={12} style={{ marginBottom: 10 }} />
-            <Skeleton width="70%" height={14} borderRadius={7} style={{ marginBottom: 4 }} />
-            <Skeleton width="50%" height={10} borderRadius={5} />
+            <SkeletonRing size={64} />
+            <Skeleton width={44} height={10} borderRadius={5} />
           </View>
         ))}
       </View>
-
-      {/* Filter chips */}
-      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-        {[50, 80, 55, 65, 70].map((w, i) => (
-          <Skeleton key={i} width={w} height={34} borderRadius={RADIUS.full} />
-        ))}
-      </View>
-
-      {/* Meal list */}
-      <SkeletonListItem style={{ marginBottom: 12 }} hasImage />
-      <SkeletonListItem style={{ marginBottom: 12 }} hasImage />
-      <SkeletonListItem hasImage />
+      <ContentCard height={120} bars={7} />
+      <SkeletonListItem />
+      <SkeletonListItem />
+      <SkeletonListItem />
     </View>
   </View>
 );
 
 // ── WaterSkeleton ─────────────────────────────────────────────────────────────
-// Mirrors: header (title + date nav + glass + stats) + quick-add row +
-//          progress card + goal chips card + log header + 3 log rows + tip card
 export const WaterSkeleton: React.FC = () => (
   <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
-    <StatusBar barStyle="dark-content" />
+    <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-    {/* ── Header (matches LinearGradient header in real screen) ── */}
-    <View
-      style={{
-        backgroundColor: COLORS.bg,
-        paddingTop: 56,
-        paddingHorizontal: 24,
-        paddingBottom: 28,
-        borderBottomLeftRadius: 36,
-        borderBottomRightRadius: 36,
-        borderBottomWidth: 1,
-        borderBottomColor: '#DBEAFE',
-      }}
-    >
-      {/* Title */}
-      <Skeleton width={160} height={22} borderRadius={11} style={{ marginBottom: 16 }} />
-
-      {/* Date nav row */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 12,
-          marginBottom: 20,
-        }}
-      >
-        <Skeleton width={36} height={36} borderRadius={18} />
-        <View style={{ alignItems: 'center', gap: 5 }}>
-          <Skeleton width={80} height={16} borderRadius={8} />
-          <Skeleton width={90} height={11} borderRadius={6} />
+    <GradientHero>
+      {/* Glass left + 3 chips right */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+        <SkeletonFrost size={99} borderRadius={14} style={{ height: 135 }} />
+        <View style={{ flex: 1, gap: 8 }}>
+          {[1, 2, 3].map((i) => (
+            <SkeletonChip key={i} />
+          ))}
         </View>
-        <Skeleton width={36} height={36} borderRadius={18} />
       </View>
-
-      {/* Glass — exact SVG replica of WaterGlass */}
-      <View style={{ alignItems: 'center', marginBottom: 16 }}>
-        <SkeletonGlass />
-      </View>
-
-      {/* Swipe hint + status badge */}
-      <View style={{ alignItems: 'center', gap: 10, marginBottom: 8 }}>
-        <Skeleton width={160} height={12} borderRadius={6} />
-        <Skeleton width={120} height={30} borderRadius={15} />
-      </View>
-
-      {/* Stats row */}
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-around',
-          backgroundColor: COLORS.bgCard,
-          borderRadius: 20,
-          paddingVertical: 16,
-          marginHorizontal: 20,
-          marginTop: 12,
-          borderWidth: 1,
-          borderColor: COLORS.border,
-        }}
-      >
-        {[1, 2, 3].map((i) => (
-          <View key={i} style={{ alignItems: 'center', gap: 7 }}>
-            <Skeleton width={54} height={18} borderRadius={9} />
-            <Skeleton width={54} height={10} borderRadius={5} />
-          </View>
-        ))}
-      </View>
-    </View>
-
-    {/* ── Body ── */}
+    </GradientHero>
     <ScrollView
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingHorizontal: 20, marginTop: 20, paddingBottom: 110 }}
+      style={{ marginTop: HERO_H }}
+      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 110, gap: 14 }}
     >
-      {/* Quick add title + 4 chips */}
-      <Skeleton width={90} height={17} borderRadius={8} style={{ marginBottom: 12 }} />
-      <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
+      {/* Quick add chips */}
+      <View style={{ flexDirection: 'row', gap: 10 }}>
         {[1, 2, 3, 4].map((i) => (
           <Skeleton key={i} width={(SCREEN_WIDTH - 80) / 4} height={62} borderRadius={16} />
         ))}
       </View>
-
-      {/* Progress card */}
-      <View
-        style={{
-          backgroundColor: COLORS.bgCard,
-          borderRadius: RADIUS.lg,
-          borderWidth: 1,
-          borderColor: COLORS.border,
-          padding: 18,
-          marginBottom: 16,
-          shadowColor: '#3B82F6',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.07,
-          shadowRadius: 12,
-          elevation: 3,
-        }}
-      >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
-          <Skeleton width={100} height={13} borderRadius={6} />
-          <Skeleton width={80} height={13} borderRadius={6} />
-        </View>
-        <Skeleton width="100%" height={12} borderRadius={99} style={{ marginBottom: 10 }} />
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Skeleton width={32} height={10} borderRadius={5} />
-          <Skeleton width={28} height={10} borderRadius={5} />
-          <Skeleton width={50} height={10} borderRadius={5} />
-        </View>
-      </View>
-
-      {/* Goal chips card */}
-      <View
-        style={{
-          backgroundColor: COLORS.bgCard,
-          borderRadius: RADIUS.lg,
-          borderWidth: 1,
-          borderColor: COLORS.border,
-          padding: 16,
-          marginBottom: 20,
-          shadowColor: '#3B82F6',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.07,
-          shadowRadius: 12,
-          elevation: 3,
-        }}
-      >
-        <Skeleton width={80} height={13} borderRadius={6} style={{ marginBottom: 14 }} />
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Skeleton key={i} width={56} height={34} borderRadius={RADIUS.full} />
-          ))}
-        </View>
-      </View>
-
-      {/* Log section */}
-      <Skeleton width={100} height={17} borderRadius={8} style={{ marginBottom: 12 }} />
-      {[1, 2, 3].map((i) => (
-        <View
-          key={i}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            backgroundColor: COLORS.bgCard,
-            borderRadius: RADIUS.lg,
-            borderWidth: 1,
-            borderColor: COLORS.border,
-            padding: 14,
-            marginBottom: 10,
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <Skeleton width={8} height={8} borderRadius={4} />
-            <Skeleton width={60} height={14} borderRadius={7} />
-          </View>
-          <Skeleton width={44} height={12} borderRadius={6} />
-        </View>
-      ))}
-
-      {/* Tip card */}
-      <View
-        style={{
-          backgroundColor: COLORS.bgCard,
-          borderRadius: RADIUS.lg,
-          borderWidth: 1,
-          borderColor: '#DBEAFE',
-          padding: 16,
-          marginTop: 4,
-        }}
-      >
-        <Skeleton width={120} height={12} borderRadius={6} style={{ marginBottom: 10 }} />
-        <Skeleton width="100%" height={12} borderRadius={6} style={{ marginBottom: 6 }} />
-        <Skeleton width="80%" height={12} borderRadius={6} />
-      </View>
+      <ContentCard height={80} />
+      <ContentCard height={90} chips={6} />
+      <SkeletonListItem />
+      <SkeletonListItem />
+      <SkeletonListItem />
     </ScrollView>
   </View>
 );

@@ -120,7 +120,7 @@ const PaywallModal: React.FC<Props> = ({ visible, onClose, onSubscribe, triggerF
           >
             {/* Hero gradient header */}
             <LinearGradient
-              colors={['#7C3AED', '#4F46E5', '#06B6D4']}
+              colors={['#0891B2', '#0E7490', '#06B6D4']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={s.hero}
@@ -165,7 +165,7 @@ const PaywallModal: React.FC<Props> = ({ visible, onClose, onSubscribe, triggerF
                   <View style={[s.planCard, selected === p.id && s.planCardActive]}>
                     {p.badge ? (
                       <LinearGradient
-                        colors={['#7C3AED', '#06B6D4']}
+                        colors={['#0891B2', '#06B6D4']}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={s.planBadge}
@@ -176,11 +176,11 @@ const PaywallModal: React.FC<Props> = ({ visible, onClose, onSubscribe, triggerF
                       <View style={{ height: 20 }} />
                     )}
 
-                    <Text style={[s.planLabel, selected === p.id && { color: '#7C3AED' }]}>
+                    <Text style={[s.planLabel, selected === p.id && { color: '#0891B2' }]}>
                       {p.label}
                     </Text>
 
-                    <Text style={[s.planPrice, selected === p.id && { color: '#7C3AED' }]}>
+                    <Text style={[s.planPrice, selected === p.id && { color: '#0891B2' }]}>
                       {currency === 'inr' ? p.priceINR : p.priceUSD}
                     </Text>
 
@@ -210,7 +210,7 @@ const PaywallModal: React.FC<Props> = ({ visible, onClose, onSubscribe, triggerF
               style={{ marginHorizontal: 20, marginTop: 4 }}
             >
               <LinearGradient
-                colors={['#7C3AED', '#4F46E5', '#06B6D4']}
+                colors={['#0891B2', '#0E7490', '#06B6D4']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={s.ctaBtn}
@@ -265,7 +265,7 @@ const PaywallModal: React.FC<Props> = ({ visible, onClose, onSubscribe, triggerF
                 <View style={s.compareHeader}>
                   <Text style={[s.compareCol, { flex: 2 }]}>Feature</Text>
                   <Text style={[s.compareCol, { flex: 1, textAlign: 'center' }]}>Free</Text>
-                  <Text style={[s.compareCol, { flex: 1, textAlign: 'center', color: '#7C3AED' }]}>
+                  <Text style={[s.compareCol, { flex: 1, textAlign: 'center', color: '#0891B2' }]}>
                     Pro
                   </Text>
                 </View>
@@ -287,7 +287,7 @@ const PaywallModal: React.FC<Props> = ({ visible, onClose, onSubscribe, triggerF
                     <Text style={[s.compareRowLabel, { flex: 2 }]}>{label as string}</Text>
                     <Text style={[s.compareRowVal, { flex: 1 }]}>{free ? '✓' : '—'}</Text>
                     <Text
-                      style={[s.compareRowVal, { flex: 1, color: '#7C3AED', fontWeight: '800' }]}
+                      style={[s.compareRowVal, { flex: 1, color: '#0891B2', fontWeight: '800' }]}
                     >
                       {pro ? '✓' : '—'}
                     </Text>
@@ -384,14 +384,14 @@ const s = StyleSheet.create({
   currencyBtn: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: RADIUS.full },
   currencyBtnActive: {
     backgroundColor: '#fff',
-    shadowColor: '#7C3AED',
+    shadowColor: '#0891B2',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
   },
   currencyBtnTxt: { fontSize: 12, color: COLORS.textMuted, fontWeight: '600' },
-  currencyBtnTxtActive: { color: '#7C3AED', fontWeight: '700' },
+  currencyBtnTxtActive: { color: '#0891B2', fontWeight: '700' },
 
   // Plan cards
   plansRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginBottom: 16 },
@@ -406,7 +406,7 @@ const s = StyleSheet.create({
     overflow: 'hidden',
     minHeight: 160,
   },
-  planCardActive: { borderColor: '#7C3AED', backgroundColor: '#F5F3FF' },
+  planCardActive: { borderColor: '#0891B2', backgroundColor: '#F5F3FF' },
   planBadge: {
     borderRadius: RADIUS.full,
     paddingHorizontal: 8,
@@ -435,7 +435,7 @@ const s = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#0891B2',
     borderWidth: 3,
     borderColor: '#fff',
   },
@@ -446,7 +446,7 @@ const s = StyleSheet.create({
     height: 54,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#7C3AED',
+    shadowColor: '#0891B2',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 14,

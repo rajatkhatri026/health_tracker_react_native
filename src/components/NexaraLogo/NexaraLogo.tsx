@@ -73,23 +73,23 @@ const NexaraLogo: React.FC<Props> = ({
         <Defs>
           {/* Shield gradient: deep purple → cyan */}
           <LinearGradient id="nx_shield" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor="#5B21B6" stopOpacity="1" />
+            <Stop offset="0%" stopColor="#075985" stopOpacity="1" />
             <Stop offset="100%" stopColor="#0891B2" stopOpacity="1" />
           </LinearGradient>
           {/* Shield border glow */}
           <LinearGradient id="nx_border" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor="#A78BFA" stopOpacity="0.9" />
+            <Stop offset="0%" stopColor="#38BDF8" stopOpacity="0.9" />
             <Stop offset="100%" stopColor="#67E8F9" stopOpacity="0.9" />
           </LinearGradient>
           {/* N-pulse stroke gradient */}
           <LinearGradient id="nx_pulse" x1="0%" y1="100%" x2="100%" y2="0%">
-            <Stop offset="0%" stopColor="#C4B5FD" />
+            <Stop offset="0%" stopColor="#7DD3E8" />
             <Stop offset="50%" stopColor="#FFFFFF" />
             <Stop offset="100%" stopColor="#A5F3FC" />
           </LinearGradient>
           {/* Subtle inner glow circle */}
           <LinearGradient id="nx_glow" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor="#7C3AED" stopOpacity="0.25" />
+            <Stop offset="0%" stopColor="#0891B2" stopOpacity="0.25" />
             <Stop offset="100%" stopColor="#06B6D4" stopOpacity="0.08" />
           </LinearGradient>
         </Defs>
@@ -128,7 +128,7 @@ const NexaraLogo: React.FC<Props> = ({
           >
             <Defs>
               <LinearGradient id="nx_wordmark" x1="0%" y1="0%" x2="100%" y2="0%">
-                <Stop offset="0%" stopColor="#7C3AED" />
+                <Stop offset="0%" stopColor="#0891B2" />
                 <Stop offset="100%" stopColor="#0891B2" />
               </LinearGradient>
             </Defs>
@@ -154,7 +154,7 @@ const NexaraLogo: React.FC<Props> = ({
               includeFontPadding: false,
             }}
           >
-            Nex<Text style={{ color: '#A78BFA' }}>ara</Text>
+            Nex<Text style={{ color: '#38BDF8' }}>ara</Text>
           </Text>
         ))}
     </View>

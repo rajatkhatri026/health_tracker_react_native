@@ -17,7 +17,7 @@ const RingProgress: React.FC<Props> = ({
   size = 160,
   strokeWidth = 14,
   progress,
-  gradientColors = ['#7C3AED', '#06B6D4'],
+  gradientColors = ['#0891B2', '#06B6D4'],
   trackColor = '#E8ECF4',
   label,
   sublabel,

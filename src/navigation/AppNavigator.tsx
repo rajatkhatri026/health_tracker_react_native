@@ -11,7 +11,7 @@ import { useRef, useState, useEffect } from 'react';
 import * as Notifications from 'expo-notifications';
 import { createNotification } from '../api/notifications';
 import { scheduleAllSmartNotifications } from '../utils/smartNotifications';
-import { resetPremiumStatus } from '../hooks/usePremium';
+
 import { useSubscription } from '../hooks/useSubscription';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -44,6 +44,7 @@ import FastingTimerScreen from '../screens/FastingTimer/FastingTimerScreen';
 import ExerciseLibraryScreen from '../screens/ExerciseLibrary/ExerciseLibraryScreen';
 import BarcodeScannerScreen from '../screens/BarcodeScanner/BarcodeScannerScreen';
 import PaywallScreen from '../screens/Paywall/PaywallScreen';
+import PremiumWelcomeScreen from '../screens/PremiumWelcome/PremiumWelcomeScreen';
 import WorkoutProgramsScreen from '../screens/WorkoutPrograms/WorkoutProgramsScreen';
 import WeeklyReportScreen from '../screens/WeeklyReport/WeeklyReportScreen';
 import DashboardScreen from '../screens/Dashboard/DashboardScreen';
@@ -55,14 +56,6 @@ import ProfileScreen from '../screens/Profile/ProfileScreen';
 import WorkoutDetailScreen from '../screens/Workout/WorkoutDetailScreen';
 import StepsScreen from '../screens/Steps/StepsScreen';
 import CaloriesScreen from '../screens/Calories/CaloriesScreen';
-import { withPremiumGate } from '../components/PremiumGate/withPremiumGate';
-
-// ── Gated screens — PremiumGate shown if user is not premium ─────────────────
-const GatedAICoach = withPremiumGate(AICoachScreen, 'AI Health Coach');
-const GatedMealPlanner = withPremiumGate(MealPlannerScreen, 'Meal Planner');
-const GatedBarcodeScanner = withPremiumGate(BarcodeScannerScreen, 'Barcode Food Scanner');
-const GatedWorkoutPrograms = withPremiumGate(WorkoutProgramsScreen, 'Workout Programs');
-const GatedWeeklyReport = withPremiumGate(WeeklyReportScreen, 'Weekly Report Card');
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -143,7 +136,7 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
             >
               <Icon
                 size={22}
-                color={isFocused ? '#7C3AED' : COLORS.textMuted}
+                color={isFocused ? '#0891B2' : COLORS.textMuted}
                 strokeWidth={isFocused ? 2.5 : 1.8}
               />
               {isFocused && <View style={s.activeDot} />}
@@ -164,7 +157,7 @@ const s = StyleSheet.create({
   },
   centerWrap: {
     position: 'absolute',
-    top: -28, // half of button height (56/2) so it sits centred on the top edge
+    top: -8,
     alignSelf: 'center',
     zIndex: 10,
   },
@@ -213,7 +206,7 @@ const s = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#0891B2',
   },
 });
 
@@ -240,11 +233,6 @@ function RootNavigator() {
   const { isAuthenticated, isLoading, onboardingDone, isNewUser, user } = useAuth();
 
   // ── Schedule smart notifications on login ────────────────────────────────────
-  // Clear any stale premium flag set by mock purchase during development
-  useEffect(() => {
-    resetPremiumStatus();
-  }, []);
-
   useEffect(() => {
     if (!user?.user_id || !isAuthenticated) return;
     scheduleAllSmartNotifications(user.name ?? 'there').catch(() => {});
@@ -304,7 +292,7 @@ function RootNavigator() {
           backgroundColor: COLORS.bg,
         }}
       >
-        <ActivityIndicator color="#7C3AED" size="large" />
+        <ActivityIndicator color="#0891B2" size="large" />
       </View>
     );
   }
@@ -313,109 +301,9 @@ function RootNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
       {!isAuthenticated ? (
         <Stack.Screen name="Auth" component={AuthScreen} />
-      ) : !onboardingDone && isNewUser ? (
-        // Brand-new user: go through onboarding
+      ) : !onboardingDone ? (
+        // Onboarding not completed — always show regardless of new/existing user
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-      ) : !onboardingDone && !isNewUser ? (
-        <>
-          <Stack.Screen name="Main" component={MainTabs} />
-          <Stack.Screen name="WorkoutDetail" component={WorkoutDetailScreen} />
-          <Stack.Screen
-            name="AICoach"
-            component={GatedAICoach}
-            options={{ animation: 'slide_from_bottom' }}
-          />
-          <Stack.Screen
-            name="MealPlanner"
-            component={GatedMealPlanner}
-            options={{ animation: 'slide_from_right' }}
-          />
-          <Stack.Screen
-            name="WeightProgress"
-            component={WeightProgressScreen}
-            options={{ animation: 'slide_from_right' }}
-          />
-          <Stack.Screen
-            name="FastingTimer"
-            component={FastingTimerScreen}
-            options={{ animation: 'slide_from_right' }}
-          />
-          <Stack.Screen
-            name="ExerciseLibrary"
-            component={ExerciseLibraryScreen}
-            options={{ animation: 'slide_from_right' }}
-          />
-          <Stack.Screen
-            name="BarcodeScanner"
-            component={GatedBarcodeScanner}
-            options={{ animation: 'slide_from_bottom' }}
-          />
-          <Stack.Screen
-            name="Paywall"
-            component={PaywallScreen}
-            options={{ animation: 'slide_from_bottom' }}
-          />
-          <Stack.Screen
-            name="WorkoutPrograms"
-            component={GatedWorkoutPrograms}
-            options={{ animation: 'slide_from_right' }}
-          />
-          <Stack.Screen
-            name="WeeklyReport"
-            component={GatedWeeklyReport}
-            options={{ animation: 'slide_from_right' }}
-          />
-        </>
-      ) : isNewUser ? (
-        <>
-          <Stack.Screen name="Main" component={MainTabs} />
-          <Stack.Screen name="WorkoutDetail" component={WorkoutDetailScreen} />
-          <Stack.Screen
-            name="AICoach"
-            component={GatedAICoach}
-            options={{ animation: 'slide_from_bottom' }}
-          />
-          <Stack.Screen
-            name="MealPlanner"
-            component={GatedMealPlanner}
-            options={{ animation: 'slide_from_right' }}
-          />
-          <Stack.Screen
-            name="WeightProgress"
-            component={WeightProgressScreen}
-            options={{ animation: 'slide_from_right' }}
-          />
-          <Stack.Screen
-            name="FastingTimer"
-            component={FastingTimerScreen}
-            options={{ animation: 'slide_from_right' }}
-          />
-          <Stack.Screen
-            name="ExerciseLibrary"
-            component={ExerciseLibraryScreen}
-            options={{ animation: 'slide_from_right' }}
-          />
-          <Stack.Screen
-            name="BarcodeScanner"
-            component={GatedBarcodeScanner}
-            options={{ animation: 'slide_from_bottom' }}
-          />
-          <Stack.Screen
-            name="Paywall"
-            component={PaywallScreen}
-            options={{ animation: 'slide_from_bottom' }}
-          />
-          <Stack.Screen
-            name="WorkoutPrograms"
-            component={GatedWorkoutPrograms}
-            options={{ animation: 'slide_from_right' }}
-          />
-          <Stack.Screen
-            name="WeeklyReport"
-            component={GatedWeeklyReport}
-            options={{ animation: 'slide_from_right' }}
-          />
-        </>
       ) : (
         <>
           <Stack.Screen name="WelcomeBack" component={WelcomeBackScreen} />
@@ -423,12 +311,12 @@ function RootNavigator() {
           <Stack.Screen name="WorkoutDetail" component={WorkoutDetailScreen} />
           <Stack.Screen
             name="AICoach"
-            component={GatedAICoach}
+            component={AICoachScreen}
             options={{ animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="MealPlanner"
-            component={GatedMealPlanner}
+            component={MealPlannerScreen}
             options={{ animation: 'slide_from_right' }}
           />
           <Stack.Screen
@@ -448,7 +336,7 @@ function RootNavigator() {
           />
           <Stack.Screen
             name="BarcodeScanner"
-            component={GatedBarcodeScanner}
+            component={BarcodeScannerScreen}
             options={{ animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
@@ -457,13 +345,18 @@ function RootNavigator() {
             options={{ animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
+            name="PremiumWelcome"
+            component={PremiumWelcomeScreen}
+            options={{ animation: 'fade', headerShown: false }}
+          />
+          <Stack.Screen
             name="WorkoutPrograms"
-            component={GatedWorkoutPrograms}
+            component={WorkoutProgramsScreen}
             options={{ animation: 'slide_from_right' }}
           />
           <Stack.Screen
             name="WeeklyReport"
-            component={GatedWeeklyReport}
+            component={WeeklyReportScreen}
             options={{ animation: 'slide_from_right' }}
           />
         </>

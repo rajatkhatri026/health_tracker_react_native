@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
+import { setPremiumStatus } from './usePremium';
 
 export interface SubscriptionStatus {
   status: 'none' | 'active' | 'expired' | 'cancelled';
@@ -37,13 +38,19 @@ export const useSubscription = () => {
   const [sub, setSub] = useState<SubscriptionStatus>(DEFAULT);
   const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(async () => {
-    if (!user) return;
+  const refresh = useCallback(async (): Promise<SubscriptionStatus> => {
+    if (!user) return DEFAULT;
     try {
       const { data } = await api.get<SubscriptionStatus>(`/users/${user.user_id}/subscription`);
-      setSub({ ...data, isActive: data.status === 'active' });
+      const updated = { ...data, isActive: data.status === 'active' };
+      setSub(updated);
+      // Keep usePremium in sync with server truth
+      await setPremiumStatus(updated.isPaid);
+      return updated;
     } catch {
-      setSub(DEFAULT);
+      // Network error — don't wipe premium status, keep whatever is cached
+      setLoading(false);
+      return DEFAULT;
     } finally {
       setLoading(false);
     }
@@ -61,6 +68,7 @@ export const useSubscription = () => {
       );
       const updated = { ...data, isActive: true };
       setSub(updated);
+      await setPremiumStatus(true);
       return updated;
     },
     [user]
@@ -68,6 +76,7 @@ export const useSubscription = () => {
 
   const cancel = useCallback(async (): Promise<void> => {
     await api.post(`/users/${user!.user_id}/subscription/cancel`);
+    await setPremiumStatus(false);
     await refresh();
   }, [user, refresh]);
 

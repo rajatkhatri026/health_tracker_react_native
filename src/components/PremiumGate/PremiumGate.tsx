@@ -127,7 +127,7 @@ export default function PremiumGate({ visible, onClose, featureName }: Props) {
         {/* Feature hero */}
         <View style={s.heroRow}>
           <LinearGradient
-            colors={['#7C3AED', '#4F46E5']}
+            colors={['#0891B2', '#0E7490']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={s.heroIcon}
@@ -187,7 +187,7 @@ export default function PremiumGate({ visible, onClose, featureName }: Props) {
             </Text>
           </View>
           <LinearGradient
-            colors={['#7C3AED', '#4F46E5']}
+            colors={['#0891B2', '#0E7490']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={s.priceBoxActive}
@@ -219,7 +219,7 @@ export default function PremiumGate({ visible, onClose, featureName }: Props) {
           style={{ borderRadius: RADIUS.full, overflow: 'hidden', marginTop: 14 }}
         >
           <LinearGradient
-            colors={['#7C3AED', '#4F46E5']}
+            colors={['#0891B2', '#0E7490']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={s.ctaBtn}
@@ -292,10 +292,10 @@ const s = StyleSheet.create({
     marginBottom: 16,
     gap: 8,
     borderWidth: 1,
-    borderColor: '#EDE9FE',
+    borderColor: '#E0F7FA',
   },
   highlightRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  highlightDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#7C3AED' },
+  highlightDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#0891B2' },
   highlightTxt: { fontSize: 13, fontWeight: '600', color: COLORS.text, flex: 1 },
 
   allLabel: {
@@ -318,7 +318,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  chipActive: { backgroundColor: '#EDE9FE', borderColor: '#DDD6FE' },
+  chipActive: { backgroundColor: '#E0F7FA', borderColor: '#BAE6FD' },
   chipTxt: { fontSize: 11, fontWeight: '600', color: COLORS.text },
 
   pricingRow: { flexDirection: 'row', gap: 10 },

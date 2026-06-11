@@ -33,6 +33,10 @@ import PaymentModal, { type PaymentPlan } from '../../components/PaymentModal/Pa
 import { exportPlanAsPdf } from '../../utils/exportPdf';
 import { useAuth } from '../../context/AuthContext';
 import { useSubscription } from '../../hooks/useSubscription';
+import * as SecureStore from 'expo-secure-store';
+import type { MealProfile, ActivityLevel, FitnessGoal, DietType } from '../../utils/calorieCalc';
+
+const MEAL_PROFILE_KEY = 'meal_user_profile';
 
 const { width } = Dimensions.get('window');
 
@@ -102,7 +106,7 @@ const MEAL_TYPES: {
     label: 'Dinner',
     emoji: '🌙',
     time: '6:00 – 8:00 PM',
-    color: '#7C3AED',
+    color: '#0891B2',
     bg: '#F5F3FF',
   },
   { key: 'snack', label: 'Snacks', emoji: '🍎', time: 'Any time', color: '#EC4899', bg: '#FDF2F8' },
@@ -256,7 +260,7 @@ const NutrientPanel: React.FC<{
     { label: 'Calcium', val: n.calcium, unit: 'mg', rda: 1000, color: '#06B6D4' },
     { label: 'Iron', val: n.iron, unit: 'mg', rda: 18, color: '#DC2626' },
     { label: 'Potassium', val: n.potassium, unit: 'mg', rda: 3500, color: '#059669' },
-    { label: 'Magnesium', val: n.magnesium, unit: 'mg', rda: 420, color: '#7C3AED' },
+    { label: 'Magnesium', val: n.magnesium, unit: 'mg', rda: 420, color: '#0891B2' },
     { label: 'Sodium', val: n.sodium, unit: 'mg', rda: 2300, color: '#6B7280' },
     { label: 'Zinc', val: n.zinc, unit: 'mg', rda: 11, color: '#D97706' },
   ].filter((r) => (r.val ?? 0) > 0);
@@ -626,13 +630,7 @@ const AddMealModal: React.FC<{
                           return (
                             <TouchableOpacity
                               key={food.fdcId}
-                              onPress={() => {
-                                if (!isPro) {
-                                  onPaywall('Full Nutrient Panel');
-                                  return;
-                                }
-                                setSelected(food);
-                              }}
+                              onPress={() => setSelected(food)}
                               activeOpacity={0.75}
                             >
                               <View style={ms.resultRow}>
@@ -648,29 +646,11 @@ const AddMealModal: React.FC<{
                                   <Text style={ms.resultCal}>{kcal}</Text>
                                   <Text style={ms.resultCalUnit}>kcal</Text>
                                 </View>
-                                {isPro ? (
-                                  <Text
-                                    style={{ color: COLORS.textMuted, marginLeft: 4, fontSize: 16 }}
-                                  >
-                                    ›
-                                  </Text>
-                                ) : (
-                                  <View
-                                    style={{
-                                      backgroundColor: '#EDE9FE',
-                                      borderRadius: 6,
-                                      paddingHorizontal: 6,
-                                      paddingVertical: 2,
-                                      marginLeft: 6,
-                                    }}
-                                  >
-                                    <Text
-                                      style={{ fontSize: 10, color: '#7C3AED', fontWeight: '800' }}
-                                    >
-                                      PRO
-                                    </Text>
-                                  </View>
-                                )}
+                                <Text
+                                  style={{ color: COLORS.textMuted, marginLeft: 4, fontSize: 16 }}
+                                >
+                                  ›
+                                </Text>
                               </View>
                             </TouchableOpacity>
                           );
@@ -895,7 +875,8 @@ const PlanDetailModal: React.FC<{
   isPaid: boolean;
   userName: string;
   userEmail?: string;
-}> = ({ plan, onClose, isPaid, userName, userEmail }) => {
+  mealProfile?: MealProfile | null;
+}> = ({ plan, onClose, isPaid, userName, userEmail, mealProfile }) => {
   const [dayIdx, setDayIdx] = useState(0);
   const [exporting, setExporting] = useState(false);
   if (!plan) return null;
@@ -907,7 +888,11 @@ const PlanDetailModal: React.FC<{
     if (!isPaid) return;
     setExporting(true);
     try {
-      await exportPlanAsPdf(plan, { name: userName, email: userEmail });
+      await exportPlanAsPdf(plan, {
+        name: userName || 'User',
+        email: userEmail,
+        mealProfile: mealProfile ?? undefined,
+      });
     } catch {
       // silently fail — sharing dialog dismissed
     } finally {
@@ -940,7 +925,7 @@ const PlanDetailModal: React.FC<{
               activeOpacity={0.8}
             >
               <LinearGradient
-                colors={['#7C3AED', '#06B6D4']}
+                colors={['#0891B2', '#06B6D4']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={pd.exportGrad}
@@ -1201,9 +1186,9 @@ const CheckinModal: React.FC<{
                     borderRadius: 10,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: adherence >= n ? '#7C3AED' : COLORS.bgInput,
+                    backgroundColor: adherence >= n ? '#0891B2' : COLORS.bgInput,
                     borderWidth: 1,
-                    borderColor: adherence >= n ? '#7C3AED' : COLORS.border,
+                    borderColor: adherence >= n ? '#0891B2' : COLORS.border,
                   }}
                 >
                   <Text
@@ -1228,7 +1213,7 @@ const CheckinModal: React.FC<{
             activeOpacity={0.85}
           >
             <LinearGradient
-              colors={['#7C3AED', '#06B6D4']}
+              colors={['#0891B2', '#06B6D4']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={{
@@ -1249,114 +1234,640 @@ const CheckinModal: React.FC<{
   );
 };
 
+// ── Meal Profile Setup Sheet ──────────────────────────────────────────────────
+
+const ACTIVITY_OPTIONS: { value: ActivityLevel; label: string; desc: string }[] = [
+  { value: 'sedentary', label: 'Sedentary', desc: 'Little or no exercise' },
+  { value: 'light', label: 'Lightly Active', desc: '1–3 days/week' },
+  { value: 'moderate', label: 'Moderately Active', desc: '3–5 days/week' },
+  { value: 'active', label: 'Very Active', desc: '6–7 days/week' },
+];
+
+const GOAL_OPTIONS: { value: FitnessGoal; label: string; emoji: string; desc: string }[] = [
+  { value: 'lose_fat', label: 'Lose Fat', emoji: '🔥', desc: '500 kcal deficit · preserve muscle' },
+  { value: 'muscle_gain', label: 'Gain Muscle', emoji: '💪', desc: '300 kcal surplus · lean bulk' },
+  {
+    value: 'recomp',
+    label: 'Recomposition',
+    emoji: '⚡',
+    desc: 'Maintenance · lose fat + gain muscle',
+  },
+];
+
+const DIET_OPTIONS: { value: DietType; label: string; emoji: string; desc: string }[] = [
+  { value: 'veg', label: 'Vegetarian', emoji: '🥦', desc: 'Paneer, tofu, dairy, legumes' },
+  { value: 'nonveg', label: 'Non-Veg', emoji: '🍗', desc: 'Chicken, fish, eggs, meat' },
+  { value: 'mixed', label: 'Mixed', emoji: '🥗', desc: 'Alternates veg & non-veg days' },
+];
+
+const MealProfileSetupSheet: React.FC<{
+  visible: boolean;
+  initial: MealProfile | null;
+  onSave: (p: MealProfile) => void;
+  onClose: () => void;
+}> = ({ visible, initial, onSave, onClose }) => {
+  const [weight, setWeight] = React.useState(initial?.weightKg?.toString() ?? '');
+  const [height, setHeight] = React.useState(initial?.heightCm?.toString() ?? '');
+  const [age, setAge] = React.useState(initial?.ageYears?.toString() ?? '');
+  const [gender, setGender] = React.useState<'male' | 'female' | 'other'>(
+    initial?.gender ?? 'male'
+  );
+  const [activity, setActivity] = React.useState<ActivityLevel>(initial?.activity ?? 'moderate');
+  const [goal, setGoal] = React.useState<FitnessGoal>(initial?.goal ?? 'lose_fat');
+  const [dietType, setDietType] = React.useState<DietType>(initial?.dietType ?? 'nonveg');
+
+  React.useEffect(() => {
+    if (initial) {
+      setWeight(initial.weightKg.toString());
+      setHeight(initial.heightCm.toString());
+      setAge(initial.ageYears.toString());
+      setGender(initial.gender);
+      setActivity(initial.activity);
+      setGoal(initial.goal);
+      setDietType(initial.dietType ?? 'nonveg');
+    }
+  }, [initial]);
+
+  const handleSave = () => {
+    const w = parseFloat(weight);
+    const h = parseFloat(height);
+    const a = parseInt(age, 10);
+    if (!w || !h || !a || w < 30 || w > 300 || h < 100 || h > 250 || a < 10 || a > 100) {
+      Alert.alert(
+        'Invalid Input',
+        'Please enter valid weight (30–300 kg), height (100–250 cm), and age (10–100).'
+      );
+      return;
+    }
+    onSave({
+      weightKg: w,
+      heightCm: h,
+      ageYears: a,
+      gender,
+      activity,
+      goal,
+      dietType,
+      planStartDate: new Date().toISOString(),
+    });
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={() => {}}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+        <View
+          style={{ flex: 1, backgroundColor: 'rgba(15,15,26,0.55)', justifyContent: 'flex-end' }}
+        >
+          <View
+            style={{
+              backgroundColor: '#fff',
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              maxHeight: '92%',
+            }}
+          >
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
+            >
+              <View
+                style={{
+                  width: 40,
+                  height: 4,
+                  borderRadius: 2,
+                  backgroundColor: '#E4E7F0',
+                  alignSelf: 'center',
+                  marginBottom: 20,
+                }}
+              />
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: 4,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 20,
+                    fontWeight: '900',
+                    color: COLORS.text,
+                    letterSpacing: -0.4,
+                  }}
+                >
+                  Your Nutrition Profile
+                </Text>
+                {initial && (
+                  <TouchableOpacity onPress={onClose} style={{ padding: 6 }}>
+                    <Text style={{ fontSize: 18, color: COLORS.textMuted }}>✕</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <Text style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 24 }}>
+                We calculate your exact calorie and macro targets using Mifflin–St Jeor TDEE.
+              </Text>
+
+              {/* Body stats */}
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
+                {(
+                  [
+                    { label: 'Weight (kg)', value: weight, set: setWeight, placeholder: '70' },
+                    { label: 'Height (cm)', value: height, set: setHeight, placeholder: '170' },
+                    { label: 'Age', value: age, set: setAge, placeholder: '25' },
+                  ] as const
+                ).map((f) => (
+                  <View key={f.label} style={{ flex: 1 }}>
+                    <Text
+                      style={{
+                        fontSize: 10,
+                        fontWeight: '700',
+                        color: COLORS.textMuted,
+                        letterSpacing: 0.6,
+                        marginBottom: 6,
+                      }}
+                    >
+                      {f.label.toUpperCase()}
+                    </Text>
+                    <TextInput
+                      style={{
+                        backgroundColor: '#F8F9FC',
+                        borderWidth: 1.5,
+                        borderColor: '#E4E7F0',
+                        borderRadius: 12,
+                        height: 48,
+                        paddingHorizontal: 12,
+                        fontSize: 16,
+                        fontWeight: '700',
+                        color: COLORS.text,
+                      }}
+                      keyboardType="numeric"
+                      value={f.value}
+                      onChangeText={f.set as (v: string) => void}
+                      placeholder={f.placeholder}
+                      placeholderTextColor={COLORS.textMuted}
+                    />
+                  </View>
+                ))}
+              </View>
+
+              {/* Gender */}
+              <Text
+                style={{
+                  fontSize: 10,
+                  fontWeight: '700',
+                  color: COLORS.textMuted,
+                  letterSpacing: 0.6,
+                  marginBottom: 8,
+                }}
+              >
+                GENDER
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+                {(['male', 'female', 'other'] as const).map((g) => (
+                  <TouchableOpacity
+                    key={g}
+                    onPress={() => setGender(g)}
+                    style={{
+                      flex: 1,
+                      height: 40,
+                      borderRadius: 20,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: gender === g ? '#0891B2' : '#F3F4F8',
+                      borderWidth: 1.5,
+                      borderColor: gender === g ? '#0891B2' : '#E4E7F0',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '700',
+                        color: gender === g ? '#fff' : COLORS.textSub,
+                        textTransform: 'capitalize',
+                      }}
+                    >
+                      {g}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Activity */}
+              <Text
+                style={{
+                  fontSize: 10,
+                  fontWeight: '700',
+                  color: COLORS.textMuted,
+                  letterSpacing: 0.6,
+                  marginBottom: 8,
+                }}
+              >
+                ACTIVITY LEVEL
+              </Text>
+              <View style={{ gap: 8, marginBottom: 20 }}>
+                {ACTIVITY_OPTIONS.map((opt) => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    onPress={() => setActivity(opt.value)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: 14,
+                      borderRadius: 14,
+                      backgroundColor: activity === opt.value ? '#E0F7FA' : '#F8F9FC',
+                      borderWidth: 1.5,
+                      borderColor: activity === opt.value ? '#0891B2' : '#E4E7F0',
+                    }}
+                  >
+                    <View>
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: '700',
+                          color: activity === opt.value ? '#0891B2' : COLORS.text,
+                        }}
+                      >
+                        {opt.label}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 1 }}>
+                        {opt.desc}
+                      </Text>
+                    </View>
+                    {activity === opt.value && (
+                      <View
+                        style={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: 9,
+                          backgroundColor: '#0891B2',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>✓</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Diet Type */}
+              <Text
+                style={{
+                  fontSize: 10,
+                  fontWeight: '700',
+                  color: COLORS.textMuted,
+                  letterSpacing: 0.6,
+                  marginBottom: 8,
+                }}
+              >
+                DIET PREFERENCE
+              </Text>
+              <View style={{ gap: 8, marginBottom: 20 }}>
+                {DIET_OPTIONS.map((opt) => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    onPress={() => setDietType(opt.value)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 14,
+                      padding: 14,
+                      borderRadius: 14,
+                      backgroundColor: dietType === opt.value ? '#E0F7FA' : '#F8F9FC',
+                      borderWidth: 1.5,
+                      borderColor: dietType === opt.value ? '#0891B2' : '#E4E7F0',
+                    }}
+                  >
+                    <Text style={{ fontSize: 22 }}>{opt.emoji}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: '700',
+                          color: dietType === opt.value ? '#0891B2' : COLORS.text,
+                        }}
+                      >
+                        {opt.label}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 1 }}>
+                        {opt.desc}
+                      </Text>
+                    </View>
+                    {dietType === opt.value && (
+                      <View
+                        style={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: 9,
+                          backgroundColor: '#0891B2',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>✓</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Goal */}
+              <Text
+                style={{
+                  fontSize: 10,
+                  fontWeight: '700',
+                  color: COLORS.textMuted,
+                  letterSpacing: 0.6,
+                  marginBottom: 8,
+                }}
+              >
+                FITNESS GOAL
+              </Text>
+              <View style={{ gap: 8, marginBottom: 28 }}>
+                {GOAL_OPTIONS.map((opt) => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    onPress={() => setGoal(opt.value)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 14,
+                      padding: 14,
+                      borderRadius: 14,
+                      backgroundColor: goal === opt.value ? '#E0F7FA' : '#F8F9FC',
+                      borderWidth: 1.5,
+                      borderColor: goal === opt.value ? '#0891B2' : '#E4E7F0',
+                    }}
+                  >
+                    <Text style={{ fontSize: 24 }}>{opt.emoji}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: '700',
+                          color: goal === opt.value ? '#0891B2' : COLORS.text,
+                        }}
+                      >
+                        {opt.label}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 1 }}>
+                        {opt.desc}
+                      </Text>
+                    </View>
+                    {goal === opt.value && (
+                      <View
+                        style={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: 9,
+                          backgroundColor: '#0891B2',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>✓</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <TouchableOpacity onPress={handleSave} activeOpacity={0.85}>
+                <LinearGradient
+                  colors={['#0891B2', '#06B6D4']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={{
+                    borderRadius: RADIUS.full,
+                    height: 52,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>
+                    Save & Calculate My Plan
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+};
+
 // ── My Plans Tab ──────────────────────────────────────────────────────────────
 
 const MyPlansTab: React.FC<{
   isPaid: boolean;
+  subPlan: 'monthly' | 'yearly' | null;
   userName: string;
   userEmail?: string;
-  sub: import('../../hooks/useSubscription').SubscriptionStatus;
-  onCheckin: (w?: number, a?: number) => void;
-}> = ({ isPaid, userName, userEmail, sub, onCheckin }) => {
-  const [plans, setPlans] = useState<GoalPlan[]>([]);
-  const [loading, setLoading] = useState(true);
+  mealProfile: MealProfile | null;
+  onSetupProfile: () => void;
+}> = ({ isPaid, subPlan, userName, userEmail, mealProfile, onSetupProfile }) => {
+  const isYearly = subPlan === 'yearly';
+  const plans = getGoalPlans(mealProfile ?? undefined, subPlan);
   const [selected, setSelected] = useState<GoalPlan | null>(null);
-  const [checkinModal, setCheckinModal] = useState(false);
-  const [checkinMsg, setCheckinMsg] = useState('');
 
-  useEffect(() => {
-    getGoalPlans()
-      .then(setPlans)
-      .catch(() => setPlans([]))
-      .finally(() => setLoading(false));
-  }, []);
+  const goalToPlanId: Record<FitnessGoal, string> = {
+    lose_fat: 'fat_loss',
+    muscle_gain: 'muscle_gain',
+    recomp: 'lean_body',
+  };
 
-  // Which plan variant to show based on week offset (3 variants per plan)
-  // The planWeekOffset cycles 0→1→2→0 each check-in
-  const rotatedPlans = plans.map((plan) => {
-    const variant = sub.planWeekOffset % 3;
-    // Rotate week order: variant 0 = normal, 1 = start from day 3, 2 = start from day 5
-    const weekPlan = [...plan.weekPlan];
-    if (variant === 1) weekPlan.unshift(...weekPlan.splice(2));
-    if (variant === 2) weekPlan.unshift(...weekPlan.splice(4));
-    return { ...plan, weekPlan };
-  });
-
-  if (loading) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 }}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={{ color: COLORS.textMuted, marginTop: 12 }}>Loading plans…</Text>
-      </View>
-    );
-  }
-
-  // Check if Sunday (day to show check-in prompt)
-  const isSunday = new Date().getDay() === 0;
-  const checkinDue =
-    isSunday &&
-    (!sub.lastCheckinAt ||
-      new Date(sub.lastCheckinAt).toDateString() !== new Date().toDateString());
+  // Auto-open the plan matching the user's goal whenever goal changes
+  React.useEffect(() => {
+    if (mealProfile) {
+      const match = plans.find((p) => p.id === goalToPlanId[mealProfile.goal]);
+      if (match) setSelected(match);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mealProfile?.goal]);
 
   return (
     <ScrollView
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ padding: 20, paddingBottom: 120 }}
     >
-      {/* Streak card */}
-      {sub.isActive && (
-        <View style={ps.streakCard}>
+      {/* Profile banner */}
+      {mealProfile ? (
+        <TouchableOpacity onPress={onSetupProfile} activeOpacity={0.85}>
           <LinearGradient
-            colors={['#7C3AED', '#4F46E5', '#06B6D4']}
+            colors={['#0C2340', '#0891B2']}
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={ps.streakGrad}
+            end={{ x: 1, y: 1 }}
+            style={{
+              borderRadius: 16,
+              padding: 16,
+              marginBottom: 14,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+            }}
           >
             <View style={{ flex: 1 }}>
-              <Text style={ps.streakLabel}>YOUR STREAK</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
-                <Text style={ps.streakNum}>{sub.currentStreak}</Text>
-                <Text style={ps.streakUnit}>weeks</Text>
+              <Text
+                style={{
+                  fontSize: 11,
+                  color: 'rgba(255,255,255,0.7)',
+                  fontWeight: '700',
+                  letterSpacing: 0.6,
+                  marginBottom: 4,
+                }}
+              >
+                {GOAL_OPTIONS.find((g) => g.value === mealProfile.goal)?.emoji}{' '}
+                {GOAL_OPTIONS.find((g) => g.value === mealProfile.goal)?.label.toUpperCase()} ·{' '}
+                {DIET_OPTIONS.find((d) => d.value === (mealProfile.dietType ?? 'nonveg'))?.emoji}{' '}
+                {DIET_OPTIONS.find(
+                  (d) => d.value === (mealProfile.dietType ?? 'nonveg')
+                )?.label.toUpperCase()}
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 16 }}>
+                {[
+                  {
+                    label: 'CALORIES',
+                    value: `${plans.find((p) => p.id === goalToPlanId[mealProfile.goal])?.calories ?? '—'} kcal`,
+                  },
+                  {
+                    label: 'PROTEIN',
+                    value: `${plans.find((p) => p.id === goalToPlanId[mealProfile.goal])?.macros.protein ?? '—'}g`,
+                  },
+                  {
+                    label: 'CARBS',
+                    value: `${plans.find((p) => p.id === goalToPlanId[mealProfile.goal])?.macros.carbs ?? '—'}g`,
+                  },
+                  {
+                    label: 'FAT',
+                    value: `${plans.find((p) => p.id === goalToPlanId[mealProfile.goal])?.macros.fat ?? '—'}g`,
+                  },
+                ].map((s) => (
+                  <View key={s.label}>
+                    <Text style={{ fontSize: 14, fontWeight: '900', color: '#fff' }}>
+                      {s.value}
+                    </Text>
+                    <Text
+                      style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)', fontWeight: '600' }}
+                    >
+                      {s.label}
+                    </Text>
+                  </View>
+                ))}
               </View>
-              <Text style={ps.streakBest}>Best: {sub.longestStreak} weeks</Text>
             </View>
-            <View style={{ alignItems: 'flex-end', gap: 8 }}>
-              <View style={ps.streakFire}>
-                <Text style={{ fontSize: 28 }}>
-                  {sub.currentStreak >= 4 ? '🏆' : sub.currentStreak >= 2 ? '🔥' : '✅'}
-                </Text>
-              </View>
-              <View style={ps.daysLeftBadge}>
-                <Text style={ps.daysLeftTxt}>{sub.daysLeft}d left</Text>
-              </View>
+            <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 8, padding: 8 }}>
+              <Text style={{ fontSize: 14 }}>✏️</Text>
             </View>
           </LinearGradient>
-        </View>
-      )}
-
-      {/* Sunday check-in prompt */}
-      {checkinDue && (
-        <TouchableOpacity onPress={() => setCheckinModal(true)} activeOpacity={0.88}>
-          <View style={ps.checkinPrompt}>
-            <Text style={{ fontSize: 22 }}>📋</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity onPress={onSetupProfile} activeOpacity={0.85}>
+          <View
+            style={{
+              borderRadius: 16,
+              padding: 16,
+              marginBottom: 14,
+              backgroundColor: '#E0F7FA',
+              borderWidth: 1.5,
+              borderColor: '#0891B2',
+              borderStyle: 'dashed',
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+            }}
+          >
+            <Text style={{ fontSize: 28 }}>🎯</Text>
             <View style={{ flex: 1 }}>
-              <Text style={ps.checkinTitle}>Weekly Check-in Due!</Text>
-              <Text style={ps.checkinSub}>
-                Update your weight → unlock next week&apos;s fresh meal plan
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#0891B2', marginBottom: 2 }}>
+                Set Your Goal
+              </Text>
+              <Text style={{ fontSize: 12, color: COLORS.textMuted }}>
+                Enter your stats to get a personalised calorie and macro plan calculated just for
+                you.
               </Text>
             </View>
-            <Text style={{ color: '#7C3AED', fontSize: 18, fontWeight: '700' }}>›</Text>
+            <Text style={{ fontSize: 18, color: '#0891B2', fontWeight: '700' }}>›</Text>
           </View>
         </TouchableOpacity>
       )}
 
-      {/* Check-in success message */}
-      {!!checkinMsg && (
-        <View style={[ps.checkinPrompt, { backgroundColor: '#F0FDF4', borderColor: '#A7F3D0' }]}>
-          <Text style={{ fontSize: 16 }}>🎉</Text>
-          <Text style={{ flex: 1, fontSize: 13, color: '#065F46', fontWeight: '600' }}>
-            {checkinMsg}
-          </Text>
+      {/* Week progress banner — only shown when profile set */}
+      {mealProfile && plans[0] && (
+        <View
+          style={{
+            backgroundColor: '#F0F9FF',
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: '#BAE6FD',
+            padding: 14,
+            marginBottom: 14,
+          }}
+        >
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 8,
+            }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: '800', color: '#0369A1' }}>
+              Week {plans[0].currentWeek} of {plans[0].totalWeeks}
+            </Text>
+            <Text style={{ fontSize: 11, color: '#0891B2', fontWeight: '600' }}>
+              Next week in {plans[0].daysUntilNextWeek}d
+            </Text>
+          </View>
+          {/* Progress bar */}
+          <View style={{ height: 6, backgroundColor: '#BAE6FD', borderRadius: 3 }}>
+            <View
+              style={{
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: '#0891B2',
+                width: `${(plans[0].currentWeek / plans[0].totalWeeks) * 100}%`,
+              }}
+            />
+          </View>
+          {isYearly && (
+            <Text style={{ fontSize: 11, color: '#0369A1', marginTop: 8, fontWeight: '600' }}>
+              ⭐ Yearly plan — {plans[0].totalWeeks} weeks of unique meals unlocked
+            </Text>
+          )}
+        </View>
+      )}
+
+      {/* Upgrade nudge for monthly users */}
+      {!isYearly && mealProfile && (
+        <View
+          style={{
+            backgroundColor: '#FFFBEB',
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: '#FDE68A',
+            padding: 14,
+            marginBottom: 14,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <Text style={{ fontSize: 22 }}>⭐</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: '#92400E', marginBottom: 2 }}>
+              Upgrade to Yearly
+            </Text>
+            <Text style={{ fontSize: 11, color: '#B45309' }}>
+              Get 12 weeks of unique meal plans (3× more content) + next-week preview.
+            </Text>
+          </View>
         </View>
       )}
 
@@ -1364,9 +1875,8 @@ const MyPlansTab: React.FC<{
       <View style={ps.infoCard}>
         <Text style={ps.infoTitle}>Evidence-Based Goal Plans</Text>
         <Text style={ps.infoBody}>
-          {sub.isActive
-            ? `Week ${sub.planWeekOffset + 1} rotation active. Check in every Sunday to unlock next week's fresh plan.`
-            : 'Built on peer-reviewed sports nutrition research from ISSN, ACSM, and leading clinical journals.'}
+          Built on peer-reviewed sports nutrition research from ISSN, ACSM, and leading clinical
+          journals.
         </Text>
         <View style={ps.sourcesRow}>
           {['ISSN 2017', 'ACSM 2021', 'AJCN', 'BJSM'].map((s) => (
@@ -1378,18 +1888,103 @@ const MyPlansTab: React.FC<{
       </View>
 
       {/* Plan cards */}
-      {rotatedPlans.map((plan) => (
+      {plans.map((plan) => (
         <PlanCard key={plan.id} plan={plan} onView={() => setSelected(plan)} />
       ))}
+
+      {/* Next week preview — yearly only */}
+      {isYearly &&
+        mealProfile &&
+        (plans.find(
+          (p) =>
+            p.id ===
+            (
+              { lose_fat: 'fat_loss', muscle_gain: 'muscle_gain', recomp: 'lean_body' } as Record<
+                string,
+                string
+              >
+            )[mealProfile.goal]
+        )?.nextWeekPlan?.length ?? 0) > 0 &&
+        (() => {
+          const activePlan = plans.find(
+            (p) =>
+              p.id ===
+              (
+                { lose_fat: 'fat_loss', muscle_gain: 'muscle_gain', recomp: 'lean_body' } as Record<
+                  string,
+                  string
+                >
+              )[mealProfile.goal]
+          );
+          if (!activePlan) return null;
+          return (
+            <View
+              style={{
+                backgroundColor: '#F5F3FF',
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: '#DDD6FE',
+                padding: 16,
+                marginBottom: 16,
+              }}
+            >
+              <View
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}
+              >
+                <Text style={{ fontSize: 16 }}>👀</Text>
+                <Text style={{ fontSize: 14, fontWeight: '800', color: '#5B21B6' }}>
+                  Next Week Preview
+                </Text>
+                <View
+                  style={{
+                    backgroundColor: '#8B5CF6',
+                    borderRadius: 10,
+                    paddingHorizontal: 8,
+                    paddingVertical: 2,
+                  }}
+                >
+                  <Text style={{ fontSize: 10, color: '#fff', fontWeight: '700' }}>YEARLY</Text>
+                </View>
+              </View>
+              {activePlan.nextWeekPlan.slice(0, 3).map((day, i) => (
+                <View
+                  key={i}
+                  style={{
+                    marginBottom: 8,
+                    padding: 10,
+                    backgroundColor: '#fff',
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: '#EDE9FE',
+                  }}
+                >
+                  <Text
+                    style={{ fontSize: 12, fontWeight: '700', color: '#5B21B6', marginBottom: 4 }}
+                  >
+                    {day.day}
+                  </Text>
+                  {day.meals.slice(0, 2).map((meal, mi) => (
+                    <Text key={mi} style={{ fontSize: 11, color: COLORS.textMuted }}>
+                      {meal.meal} · {meal.kcal} kcal
+                    </Text>
+                  ))}
+                </View>
+              ))}
+              <Text style={{ fontSize: 11, color: '#7C3AED', marginTop: 4, fontStyle: 'italic' }}>
+                + {activePlan.nextWeekPlan.length - 3} more days available in{' '}
+                {activePlan.daysUntilNextWeek} days
+              </Text>
+            </View>
+          );
+        })()}
 
       {/* Disclaimer */}
       <View style={ps.disclaimer}>
         <Text style={ps.disclaimerTxt}>
           ⚕️ These plans represent population-level averages based on scientific guidelines.
           Individual calorie and macro needs vary by weight, height, age, sex, genetics, and medical
-          history.{'\n\n'}
-          Always consult a registered dietitian or your physician before starting any nutrition
-          program, especially if you have existing health conditions.
+          history.{'\n\n'}Always consult a registered dietitian or your physician before starting
+          any nutrition program.
         </Text>
       </View>
 
@@ -1399,16 +1994,7 @@ const MyPlansTab: React.FC<{
         isPaid={isPaid}
         userName={userName}
         userEmail={userEmail}
-      />
-
-      <CheckinModal
-        visible={checkinModal}
-        onClose={() => setCheckinModal(false)}
-        onSubmit={(w, a) => {
-          onCheckin(w, a);
-          setCheckinMsg('Check-in saved! Your fresh plan rotation is now active 🎉');
-          setTimeout(() => setCheckinMsg(''), 5000);
-        }}
+        mealProfile={mealProfile}
       />
     </ScrollView>
   );
@@ -1431,8 +2017,35 @@ const MealPlannerScreen: React.FC = () => {
   const isPro = sub.isActive;
   const isPaid = sub.isActive;
 
-  const [paywallVisible, setPaywallVisible] = useState(false);
-  const [paywallTrigger, setPaywallTrigger] = useState('');
+  // Meal profile (personalised TDEE + goal)
+  const [mealProfile, setMealProfile] = useState<MealProfile | null>(null);
+  const [profileSheetVisible, setProfileSheetVisible] = useState(false);
+  const profilePrompted = React.useRef(false);
+
+  useEffect(() => {
+    SecureStore.getItemAsync(MEAL_PROFILE_KEY)
+      .then((raw) => {
+        if (raw) setMealProfile(JSON.parse(raw));
+      })
+      .catch(() => {});
+  }, []);
+
+  // Show setup sheet first time user opens Plans tab with no profile
+  useEffect(() => {
+    if (activeTab === 'plans' && !mealProfile && !profilePrompted.current) {
+      profilePrompted.current = true;
+      setProfileSheetVisible(true);
+    }
+  }, [activeTab, mealProfile]);
+
+  const saveMealProfile = async (p: MealProfile) => {
+    // Preserve planStartDate if already set (don't reset the week counter on edits)
+    const startDate = mealProfile?.planStartDate ?? new Date().toISOString();
+    const toSave: MealProfile = { ...p, planStartDate: startDate };
+    setMealProfile(toSave);
+    await SecureStore.setItemAsync(MEAL_PROFILE_KEY, JSON.stringify(toSave));
+  };
+
   const [paymentVisible, setPaymentVisible] = useState(false);
   const [paymentPlan, setPaymentPlan] = useState<PaymentPlan>('yearly');
   const [currency, setCurrency] = useState<'inr' | 'usd'>('inr');
@@ -1476,135 +2089,109 @@ const MealPlannerScreen: React.FC = () => {
 
   return (
     <View style={s.screen}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* ── Header ── */}
-      <Animated.View style={entranceStyle(s0)}>
-        <View style={s.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-            <Text style={s.backArrow}>‹</Text>
-          </TouchableOpacity>
-          <View>
-            <Text style={s.headerTitle}>Meal Planner</Text>
-            <Text style={s.headerSub}>
-              {new Date().toLocaleDateString([], {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </Text>
-          </View>
-          <TouchableOpacity onPress={() => setAddModal(true)} style={s.addHeaderBtn}>
-            <Text style={s.addHeaderTxt}>+ Add</Text>
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
+      {/* ── Fixed Gradient Hero ── */}
+      <Animated.View style={[entranceStyle(s0), s.heroFixed]}>
+        <LinearGradient
+          colors={['#0C2340', '#0891B2']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={s.heroGradient}
+        >
+          {/* Decorative circles */}
+          <View
+            style={[s.heroDeco, { width: 220, height: 220, top: -70, right: -60, opacity: 0.08 }]}
+          />
+          <View
+            style={[s.heroDeco, { width: 140, height: 140, top: 40, left: -50, opacity: 0.06 }]}
+          />
 
-      {/* ── Top Tab ── */}
-      <Animated.View
-        style={[
-          entranceStyle(s0),
-          {
-            paddingHorizontal: 20,
-            paddingVertical: 12,
-            backgroundColor: '#fff',
-            borderBottomWidth: 1,
-            borderBottomColor: COLORS.border,
-          },
-        ]}
-      >
-        <View style={s.tabSwitcher}>
-          {(
-            [
-              ['log', '🍽️ Food Log'],
-              ['plans', '📋 My Plans'],
-            ] as const
-          ).map(([t, label]) => (
-            <TouchableOpacity
-              key={t}
-              onPress={() => {
-                if (t === 'plans' && !isPro) {
-                  setPaywallTrigger('Goal Plans');
-                  setPaywallVisible(true);
-                } else {
-                  setActiveTab(t);
-                }
-              }}
-              style={[s.tabSwitchBtn, activeTab === t && s.tabSwitchBtnActive]}
-            >
-              <Text style={[s.tabSwitchTxt, activeTab === t && s.tabSwitchTxtActive]}>
-                {label}
-                {t === 'plans' && !isPro ? ' 🔒' : ''}
-              </Text>
+          {/* Top row: back + title + add */}
+          <View style={s.heroTopRow}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={s.heroBackBtn}>
+              <Text style={s.heroBackArrow}>‹</Text>
             </TouchableOpacity>
-          ))}
-        </View>
+            <Text style={s.heroTitle}>Meal Planner</Text>
+            <TouchableOpacity onPress={() => setAddModal(true)} style={s.heroAddBtn}>
+              <Text style={s.heroAddTxt}>+ Add</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Calorie ring + 3 stat chips */}
+          <View style={s.heroContent}>
+            {/* Ring */}
+            <RingProgress
+              size={118}
+              strokeWidth={10}
+              progress={calPct}
+              gradientColors={['#38BDF8', '#0891B2']}
+              trackColor="rgba(255,255,255,0.15)"
+              centerContent={
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={s.heroRingCal}>{totals.calories}</Text>
+                  <Text style={s.heroRingUnit}>kcal eaten</Text>
+                  <Text style={s.heroRingPct}>{Math.round(calPct * 100)}%</Text>
+                </View>
+              }
+            />
+            {/* 3 chips stacked */}
+            <View style={s.heroChips}>
+              {[
+                { label: 'GOAL', value: `${MACRO_GOALS.calories} kcal` },
+                { label: 'EATEN', value: `${totals.calories} kcal` },
+                { label: 'REMAINING', value: `${remainingCal} kcal` },
+              ].map((chip) => (
+                <View key={chip.label} style={s.heroChip}>
+                  <Text style={s.heroChipLabel}>{chip.label}</Text>
+                  <Text style={s.heroChipVal}>{chip.value}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Tab switcher */}
+          <View style={s.heroTabRow}>
+            {(
+              [
+                ['log', '🍽️ Food Log'],
+                ['plans', '📋 My Plans'],
+              ] as const
+            ).map(([t, label]) => (
+              <TouchableOpacity
+                key={t}
+                onPress={() => setActiveTab(t)}
+                style={[s.heroTabBtn, activeTab === t && s.heroTabBtnActive]}
+              >
+                <Text style={[s.heroTabTxt, activeTab === t && s.heroTabTxtActive]}>{label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </LinearGradient>
       </Animated.View>
 
       {/* ── Plans Tab ── */}
       {activeTab === 'plans' && (
-        <MyPlansTab
-          isPaid={isPaid}
-          userName={user?.name ?? 'User'}
-          userEmail={user?.email}
-          sub={sub}
-          onCheckin={async (w, a) => {
-            try {
-              await checkin({ weightKg: w, mealAdherence: a ?? 0 });
-            } catch {}
-          }}
-        />
+        <View style={s.belowHero}>
+          <MyPlansTab
+            isPaid={isPaid}
+            subPlan={sub.plan}
+            userName={user?.name ?? 'User'}
+            userEmail={user?.email}
+            mealProfile={mealProfile}
+            onSetupProfile={() => setProfileSheetVisible(true)}
+          />
+        </View>
       )}
 
       {/* ── Food Log Tab ── */}
       {activeTab === 'log' && (
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 120 }}
+          style={s.belowHero}
+          contentContainerStyle={{ paddingBottom: 120, paddingTop: 16 }}
         >
-          {/* Calorie hero */}
-          <Animated.View style={entranceStyle(s1)}>
-            <View style={s.heroCard}>
-              <RingProgress
-                size={110}
-                strokeWidth={10}
-                progress={calPct}
-                gradientColors={['#10B981', '#059669']}
-                trackColor="#D1FAE5"
-                centerContent={
-                  <View style={{ alignItems: 'center' }}>
-                    <Text
-                      style={{
-                        fontSize: 22,
-                        fontWeight: '900',
-                        color: COLORS.text,
-                        letterSpacing: -1,
-                      }}
-                    >
-                      {totals.calories}
-                    </Text>
-                    <Text style={{ fontSize: 10, color: COLORS.textMuted, fontWeight: '600' }}>
-                      kcal
-                    </Text>
-                  </View>
-                }
-              />
-              <View style={{ flex: 1, gap: 12 }}>
-                {[
-                  { label: 'Goal', value: `${MACRO_GOALS.calories} kcal`, color: COLORS.text },
-                  { label: 'Eaten', value: `${totals.calories} kcal`, color: '#F59E0B' },
-                  { label: 'Remaining', value: `${remainingCal} kcal`, color: '#10B981' },
-                ].map((item) => (
-                  <View key={item.label} style={s.heroStatRow}>
-                    <Text style={s.heroStatLabel}>{item.label}</Text>
-                    <Text style={[s.heroStatVal, { color: item.color }]}>{item.value}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          </Animated.View>
-
-          {/* Macro breakdown — progress rings */}
+          {/* Macro breakdown */}
           <Animated.View style={entranceStyle(s1)}>
             <View style={s.macroRow}>
               {MACRO_CONFIG.map((m) => {
@@ -1617,8 +2204,8 @@ const MealPlannerScreen: React.FC = () => {
                     style={[s.macroCard, { backgroundColor: m.bg, borderColor: m.border }]}
                   >
                     <RingProgress
-                      size={72}
-                      strokeWidth={6}
+                      size={64}
+                      strokeWidth={5}
                       progress={pct}
                       gradientColors={[m.color, m.colorEnd]}
                       trackColor={m.track}
@@ -1626,7 +2213,7 @@ const MealPlannerScreen: React.FC = () => {
                         <View style={{ alignItems: 'center' }}>
                           <Text
                             style={{
-                              fontSize: 13,
+                              fontSize: 12,
                               fontWeight: '900',
                               color: m.color,
                               letterSpacing: -0.4,
@@ -1667,17 +2254,17 @@ const MealPlannerScreen: React.FC = () => {
                       style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end' }}
                     >
                       {v > 0 && (
-                        <Text style={[s.barLabel, isToday && { color: '#F59E0B' }]}>
+                        <Text style={[s.barLabel, isToday && { color: '#0891B2' }]}>
                           {v > 999 ? `${(v / 1000).toFixed(1)}k` : v}
                         </Text>
                       )}
                       <LinearGradient
-                        colors={isToday ? ['#F59E0B', '#EF4444'] : ['#F0EEFF', '#E4E7F0']}
+                        colors={isToday ? ['#0891B2', '#0C2340'] : ['#E0F7FA', '#BAE6FD']}
                         start={{ x: 0, y: 1 }}
                         end={{ x: 0, y: 0 }}
                         style={{ width: '100%', height: h, borderRadius: 6 }}
                       />
-                      <Text style={[s.barDay, isToday && { color: '#F59E0B', fontWeight: '700' }]}>
+                      <Text style={[s.barDay, isToday && { color: '#0891B2', fontWeight: '700' }]}>
                         {DAYS_SHORT[i].slice(0, 1)}
                       </Text>
                     </View>
@@ -1817,7 +2404,7 @@ const MealPlannerScreen: React.FC = () => {
       {/* FAB */}
       <TouchableOpacity onPress={() => setAddModal(true)} activeOpacity={0.85} style={s.fab}>
         <LinearGradient
-          colors={['#10B981', '#059669']}
+          colors={['#0891B2', '#0C2340']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={s.fabGrad}
@@ -1832,23 +2419,15 @@ const MealPlannerScreen: React.FC = () => {
         isPro={isPro}
         onSave={(m) => add(m).catch(() => Alert.alert('Error', 'Failed to add meal.'))}
         onClose={() => setAddModal(false)}
-        onPaywall={(feature) => {
-          setAddModal(false);
-          setPaywallTrigger(feature);
-          setPaywallVisible(true);
-        }}
+        onPaywall={() => {}}
       />
 
-      <PaywallModal
-        visible={paywallVisible}
-        triggerFeature={paywallTrigger}
-        onClose={() => setPaywallVisible(false)}
-        onSubscribe={(_plan: PlanId, _type: SubscriptionType, cur: 'inr' | 'usd') => {
-          setPaywallVisible(false);
-          setPaymentPlan(_plan as PaymentPlan);
-          setCurrency(cur);
-          setPaymentVisible(true);
-        }}
+      {/* ── Meal Profile Setup Sheet ── */}
+      <MealProfileSetupSheet
+        visible={profileSheetVisible}
+        initial={mealProfile}
+        onSave={saveMealProfile}
+        onClose={() => setProfileSheetVisible(false)}
       />
 
       {/* ── Payment Modal ── */}
@@ -1943,90 +2522,91 @@ const MealPlannerScreen: React.FC = () => {
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
+const HERO_H = 280;
+
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg },
-  header: {
+
+  // ── Fixed Hero ────────────────────────────────────────────────────────
+  heroFixed: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, height: HERO_H },
+  heroGradient: {
+    height: HERO_H,
+    paddingTop: 56,
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    overflow: 'hidden',
+    flexDirection: 'column',
+    justifyContent: 'flex-start',
+    gap: 14,
+  },
+  heroDeco: { position: 'absolute', borderRadius: 999, backgroundColor: '#fff' },
+  heroTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 56,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
-  backBtn: {
-    width: 36,
-    height: 36,
+  heroBackBtn: {
+    width: 34,
+    height: 34,
     borderRadius: 12,
-    backgroundColor: COLORS.bgInput,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backArrow: { fontSize: 20, color: COLORS.text, lineHeight: 24 },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: COLORS.text,
-    letterSpacing: -0.4,
-    textAlign: 'center',
-  },
-  headerSub: { fontSize: 11, color: COLORS.textMuted, textAlign: 'center', marginTop: 1 },
-  addHeaderBtn: {
-    backgroundColor: '#D1FAE5',
+  heroBackArrow: { fontSize: 22, color: '#fff', lineHeight: 26 },
+  heroTitle: { fontSize: 17, fontWeight: '900', color: '#fff', letterSpacing: -0.4 },
+  heroAddBtn: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
     borderRadius: RADIUS.full,
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: 'rgba(255,255,255,0.3)',
   },
-  addHeaderTxt: { color: '#059669', fontSize: 13, fontWeight: '700' },
-  tabSwitcher: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.bgInput,
-    borderRadius: RADIUS.md,
-    padding: 4,
-  },
-  tabSwitchBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: RADIUS.sm },
-  tabSwitchBtnActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  tabSwitchTxt: { fontSize: 13, color: COLORS.textMuted, fontWeight: '600' },
-  tabSwitchTxtActive: { color: COLORS.text, fontWeight: '800' },
-  heroCard: {
+  heroAddTxt: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  heroContent: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  heroRingCal: { fontSize: 18, fontWeight: '900', color: '#fff', letterSpacing: -0.8 },
+  heroRingUnit: { fontSize: 9, color: 'rgba(186,230,253,0.85)', fontWeight: '600' },
+  heroRingPct: { fontSize: 10, color: 'rgba(186,230,253,0.75)', fontWeight: '700', marginTop: 1 },
+  heroChips: { flex: 1, gap: 7 },
+  heroChip: {
+    backgroundColor: 'rgba(255,255,255,0.13)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 20,
-    backgroundColor: '#FFFFFF',
-    margin: 20,
-    marginBottom: 0,
-    borderRadius: RADIUS.xl,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-    shadowColor: '#F59E0B',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 4,
+    justifyContent: 'space-between',
   },
-  heroStatRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  heroStatLabel: { fontSize: 12, color: COLORS.textMuted },
-  heroStatVal: { fontSize: 13, fontWeight: '700' },
+  heroChipLabel: {
+    fontSize: 9,
+    color: 'rgba(186,230,253,0.75)',
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  heroChipVal: { fontSize: 14, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
+  heroTabRow: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    borderRadius: RADIUS.md,
+    padding: 3,
+  },
+  heroTabBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: RADIUS.sm - 1 },
+  heroTabBtnActive: { backgroundColor: 'rgba(255,255,255,0.18)' },
+  heroTabTxt: { fontSize: 13, color: 'rgba(186,230,253,0.7)', fontWeight: '600' },
+  heroTabTxtActive: { color: '#fff', fontWeight: '800' },
+
+  belowHero: { flex: 1, marginTop: HERO_H },
+
   macroRow: {
     flexDirection: 'row',
     gap: 10,
     paddingHorizontal: 20,
-    marginTop: 14,
-    marginBottom: 4,
+    marginBottom: 16,
   },
   macroCard: {
     flex: 1,
@@ -2045,7 +2625,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     padding: 18,
-    shadowColor: '#7C3AED',
+    shadowColor: '#0891B2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 12,
@@ -2059,14 +2639,14 @@ const s = StyleSheet.create({
   },
   cardTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text },
   badge: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#E0F7FA',
     borderRadius: RADIUS.full,
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: '#7DD3E8',
   },
-  badgeTxt: { fontSize: 11, color: '#059669', fontWeight: '600' },
+  badgeTxt: { fontSize: 11, color: '#0891B2', fontWeight: '600' },
   barLabel: { fontSize: 8, color: COLORS.textMuted, marginBottom: 2 },
   barDay: { fontSize: 9, color: COLORS.textMuted, marginTop: 4 },
   sectionTitle: {
@@ -2081,9 +2661,9 @@ const s = StyleSheet.create({
     borderRadius: RADIUS.xl,
     borderWidth: 1,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: '#0891B2',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 2,
     overflow: 'hidden',
@@ -2161,7 +2741,7 @@ const s = StyleSheet.create({
     bottom: 28,
     right: 20,
     zIndex: 10,
-    shadowColor: '#10B981',
+    shadowColor: '#0891B2',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 16,
@@ -2241,15 +2821,15 @@ const ms = StyleSheet.create({
   },
   tabBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: RADIUS.sm },
   tabBtnActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
+    backgroundColor: '#0891B2',
+    shadowColor: '#0891B2',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 2,
   },
   tabTxt: { fontSize: 12, color: COLORS.textMuted, fontWeight: '600' },
-  tabTxtActive: { color: COLORS.text, fontWeight: '700' },
+  tabTxtActive: { color: '#fff', fontWeight: '700' },
   // Search
   searchBox: {
     flexDirection: 'row',
@@ -2340,7 +2920,7 @@ const ms = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  emojiBtnActive: { borderColor: '#7C3AED', backgroundColor: '#EDE9FE' },
+  emojiBtnActive: { borderColor: '#0891B2', backgroundColor: '#E0F7FA' },
   input: {
     backgroundColor: COLORS.bgInput,
     borderRadius: RADIUS.md,
@@ -2482,42 +3062,42 @@ const ps = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#EDE9FE',
+    backgroundColor: '#E0F7FA',
     borderRadius: RADIUS.xl,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#C4B5FD',
+    borderColor: '#7DD3E8',
     marginBottom: 14,
   },
-  checkinTitle: { fontSize: 14, fontWeight: '800', color: '#5B21B6' },
-  checkinSub: { fontSize: 12, color: '#6D28D9', marginTop: 2 },
+  checkinTitle: { fontSize: 14, fontWeight: '800', color: '#075985' },
+  checkinSub: { fontSize: 12, color: '#0369A1', marginTop: 2 },
 
   infoCard: {
     backgroundColor: '#F5F3FF',
     borderRadius: RADIUS.xl,
     padding: 18,
     borderWidth: 1,
-    borderColor: '#DDD6FE',
+    borderColor: '#BAE6FD',
     marginBottom: 18,
   },
   infoTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#5B21B6',
+    color: '#075985',
     marginBottom: 8,
     letterSpacing: -0.3,
   },
-  infoBody: { fontSize: 13, color: '#6D28D9', lineHeight: 20 },
+  infoBody: { fontSize: 13, color: '#0369A1', lineHeight: 20 },
   sourcesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 },
   sourceChip: {
-    backgroundColor: '#EDE9FE',
+    backgroundColor: '#E0F7FA',
     borderRadius: RADIUS.full,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: '#C4B5FD',
+    borderColor: '#7DD3E8',
   },
-  sourceChipTxt: { fontSize: 11, color: '#5B21B6', fontWeight: '700' },
+  sourceChipTxt: { fontSize: 11, color: '#075985', fontWeight: '700' },
   card: { borderRadius: RADIUS.xl, borderWidth: 1, marginBottom: 14, overflow: 'hidden' },
   cardGrad: { padding: 18 },
   cardTop: { flexDirection: 'row', alignItems: 'center' },
@@ -2632,8 +3212,8 @@ const pd = StyleSheet.create({
   macroLabel: { fontSize: 10, color: COLORS.textMuted, fontWeight: '600' },
   rationaleText: { fontSize: 13, color: COLORS.textSub, lineHeight: 20, marginTop: 8 },
   sourceRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 4 },
-  sourceDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#7C3AED', marginTop: 6 },
-  sourceTxtRow: { fontSize: 11, color: '#5B21B6', lineHeight: 17, flex: 1 },
+  sourceDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#0891B2', marginTop: 6 },
+  sourceTxtRow: { fontSize: 11, color: '#075985', lineHeight: 17, flex: 1 },
   ruleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   ruleNum: {
     width: 24,

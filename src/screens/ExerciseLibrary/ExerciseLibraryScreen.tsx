@@ -1011,17 +1011,17 @@ const DIFF: Record<Difficulty, { label: string; color: string; bg: string; dot: 
 };
 
 const GROUP_GRAD: Record<string, readonly [string, string]> = {
-  Chest: ['#7C3AED', '#4F46E5'],
+  Chest: ['#0891B2', '#0E7490'],
   Back: ['#06B6D4', '#0891B2'],
   Shoulders: ['#F59E0B', '#D97706'],
-  Arms: ['#8B5CF6', '#7C3AED'],
+  Arms: ['#8B5CF6', '#0891B2'],
   Legs: ['#10B981', '#059669'],
   Core: ['#EF4444', '#DC2626'],
   Cardio: ['#EC4899', '#BE185D'],
 };
 
 const GROUP_LIGHT: Record<string, string> = {
-  Chest: '#EDE9FE',
+  Chest: '#E0F7FA',
   Back: '#ECFEFF',
   Shoulders: '#FEF3C7',
   Arms: '#F3E8FF',
@@ -1033,7 +1033,7 @@ const GROUP_LIGHT: Record<string, string> = {
 // ── Exercise Detail Modal ─────────────────────────────────────────────────────
 const ExerciseDetail: React.FC<{ ex: Exercise; onClose: () => void }> = ({ ex, onClose }) => {
   const insets = useSafeAreaInsets();
-  const grad = GROUP_GRAD[ex.group] ?? ['#7C3AED', '#4F46E5'];
+  const grad = GROUP_GRAD[ex.group] ?? ['#0891B2', '#0E7490'];
   const diff = DIFF[ex.difficulty];
   const [gifLoaded, setGifLoaded] = useState(false);
 
@@ -1134,7 +1134,7 @@ const ExerciseDetail: React.FC<{ ex: Exercise; onClose: () => void }> = ({ ex, o
             <Text style={d.sectionTitle}>Muscles Worked</Text>
             <View style={d.muscleRow}>
               <View
-                style={[d.musclePrimary, { backgroundColor: GROUP_LIGHT[ex.group] ?? '#EDE9FE' }]}
+                style={[d.musclePrimary, { backgroundColor: GROUP_LIGHT[ex.group] ?? '#E0F7FA' }]}
               >
                 <View style={[d.muscleDot, { backgroundColor: grad[0] }]} />
                 <Text style={[d.muscleTxt, { color: grad[0] }]}>{ex.muscle}</Text>
@@ -1201,7 +1201,7 @@ const ExerciseDetail: React.FC<{ ex: Exercise; onClose: () => void }> = ({ ex, o
 
 // ── Exercise Card ─────────────────────────────────────────────────────────────
 const ExerciseCard: React.FC<{ ex: Exercise; onPress: () => void }> = ({ ex, onPress }) => {
-  const grad = GROUP_GRAD[ex.group] ?? ['#7C3AED', '#4F46E5'];
+  const grad = GROUP_GRAD[ex.group] ?? ['#0891B2', '#0E7490'];
   const diff = DIFF[ex.difficulty];
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -1434,14 +1434,14 @@ const s = StyleSheet.create({
   headerTitle: { fontSize: 19, fontWeight: '900', color: COLORS.text, letterSpacing: -0.5 },
   headerSub: { fontSize: 12, color: COLORS.textMuted, marginTop: 1 },
   countBadge: {
-    backgroundColor: '#EDE9FE',
+    backgroundColor: '#E0F7FA',
     borderRadius: RADIUS.full,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: '#DDD6FE',
+    borderColor: '#BAE6FD',
   },
-  countTxt: { fontSize: 13, fontWeight: '800', color: '#7C3AED' },
+  countTxt: { fontSize: 13, fontWeight: '800', color: '#0891B2' },
 
   searchWrap: {
     backgroundColor: '#fff',
@@ -1516,7 +1516,7 @@ const c = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: COLORS.border,
-    shadowColor: '#7C3AED',
+    shadowColor: '#0891B2',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -1558,9 +1558,9 @@ const c = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
-    backgroundColor: '#EDE9FE',
+    backgroundColor: '#E0F7FA',
   },
-  metaChipTxt: { fontSize: 10, fontWeight: '700', color: '#7C3AED' },
+  metaChipTxt: { fontSize: 10, fontWeight: '700', color: '#0891B2' },
   arrow: { fontSize: 20, color: COLORS.border, fontWeight: '300' },
 });
 

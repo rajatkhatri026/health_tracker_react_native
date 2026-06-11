@@ -15,6 +15,7 @@ import {
   Animated,
 } from 'react-native';
 import { useEntranceAnimation, entranceStyle } from '../../hooks/useEntranceAnimation';
+import { useScrollToTopOnTabPress } from '../../hooks/useScrollToTopOnTabPress';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Svg, {
   Path,
@@ -117,11 +118,11 @@ const SleepWave: React.FC<{ data: number[] }> = ({ data }) => {
     <Svg width={chartW} height={chartH + 20}>
       <Defs>
         <SvgGrad id="swFill" x1="0%" y1="0%" x2="0%" y2="100%">
-          <Stop offset="0%" stopColor="#7C3AED" stopOpacity="0.4" />
-          <Stop offset="100%" stopColor="#7C3AED" stopOpacity="0.02" />
+          <Stop offset="0%" stopColor="#0891B2" stopOpacity="0.4" />
+          <Stop offset="100%" stopColor="#0891B2" stopOpacity="0.02" />
         </SvgGrad>
         <SvgGrad id="swLine" x1="0%" y1="0%" x2="100%" y2="0%">
-          <Stop offset="0%" stopColor="#7C3AED" />
+          <Stop offset="0%" stopColor="#0891B2" />
           <Stop offset="100%" stopColor="#06B6D4" />
         </SvgGrad>
       </Defs>
@@ -133,8 +134,8 @@ const SleepWave: React.FC<{ data: number[] }> = ({ data }) => {
           cx={p.x}
           cy={p.y}
           r={i === todayIdx ? 5 : 3}
-          fill={i === todayIdx ? '#7C3AED' : COLORS.border}
-          stroke={i === todayIdx ? '#A78BFA' : 'none'}
+          fill={i === todayIdx ? '#0891B2' : COLORS.border}
+          stroke={i === todayIdx ? '#38BDF8' : 'none'}
           strokeWidth={2}
         />
       ))}
@@ -235,7 +236,7 @@ const AlarmModal: React.FC<{
     }
   }, [visible, initial]);
 
-  const accent = form.type === 'bedtime' ? '#7C3AED' : '#F59E0B';
+  const accent = form.type === 'bedtime' ? '#0891B2' : '#F59E0B';
   const isEditing = !!initial?.id;
   const modalScrollRef = useRef<ScrollView>(null);
 
@@ -449,16 +450,16 @@ const SleepArc: React.FC<{ bedtime: string; wakeTime: string; durationHrs: numbe
       <Svg width={size} height={size} style={{ position: 'absolute' }}>
         <Defs>
           <SvgGrad id="arcGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor="#7C3AED" />
+            <Stop offset="0%" stopColor="#0891B2" />
             <Stop offset="100%" stopColor={qualColor} />
           </SvgGrad>
           <SvgGrad id="trackArc" x1="0%" y1="0%" x2="100%" y2="0%">
-            <Stop offset="0%" stopColor="#EDE9FE" />
-            <Stop offset="100%" stopColor="#EDE9FE" />
+            <Stop offset="0%" stopColor="#E0F7FA" />
+            <Stop offset="100%" stopColor="#E0F7FA" />
           </SvgGrad>
         </Defs>
         {/* Track */}
-        <Circle cx={cx} cy={cy} r={R} stroke="#EDE9FE" strokeWidth={stroke} fill="none" />
+        <Circle cx={cx} cy={cy} r={R} stroke="#E0F7FA" strokeWidth={stroke} fill="none" />
         {/* Progress arc */}
         <Circle
           cx={cx}
@@ -473,7 +474,7 @@ const SleepArc: React.FC<{ bedtime: string; wakeTime: string; durationHrs: numbe
           origin={`${cx},${cy}`}
         />
         {/* Moon icon dot at start */}
-        <Circle cx={cx} cy={cy - R} r={6} fill="#7C3AED" />
+        <Circle cx={cx} cy={cy - R} r={6} fill="#0891B2" />
         {/* Wake dot at end */}
         {(() => {
           const angle = (progress * 360 - 90) * (Math.PI / 180);
@@ -502,7 +503,7 @@ const QUALITY_CONFIG = [
   { label: 'Poor', emoji: '😞', color: '#F97316', score: 40 },
   { label: 'Okay', emoji: '😐', color: '#F59E0B', score: 60 },
   { label: 'Good', emoji: '😊', color: '#10B981', score: 80 },
-  { label: 'Perfect', emoji: '🤩', color: '#7C3AED', score: 100 },
+  { label: 'Perfect', emoji: '🤩', color: '#0891B2', score: 100 },
 ];
 
 const LogSleepModal: React.FC<{
@@ -568,7 +569,7 @@ const LogSleepModal: React.FC<{
                 activeOpacity={0.8}
               >
                 <View style={ls.timeCardIcon}>
-                  <IconMoon size={16} color="#7C3AED" />
+                  <IconMoon size={16} color="#0891B2" />
                 </View>
                 <Text style={ls.timeCardLabel}>Bedtime</Text>
                 <Text style={ls.timeCardValue}>{fmt12(bedtime)}</Text>
@@ -606,9 +607,9 @@ const LogSleepModal: React.FC<{
             {/* ── Inline clock pickers ── */}
             {activeSection === 'bedtime' && (
               <View style={ls.pickerWrap}>
-                <LinearGradient colors={['#EDE9FE', '#F8F6FF']} style={ls.pickerGrad}>
+                <LinearGradient colors={['#E0F7FA', '#F8F6FF']} style={ls.pickerGrad}>
                   <Text style={ls.pickerTitle}>Select Bedtime</Text>
-                  <ClockPicker time={bedtime} onChange={setBedtime} accentColor="#7C3AED" />
+                  <ClockPicker time={bedtime} onChange={setBedtime} accentColor="#0891B2" />
                 </LinearGradient>
               </View>
             )}
@@ -673,7 +674,7 @@ const LogSleepModal: React.FC<{
           <View style={ls.footer}>
             <TouchableOpacity onPress={save} activeOpacity={0.9}>
               <LinearGradient
-                colors={['#7C3AED', '#0891B2']}
+                colors={['#0891B2', '#0891B2']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={ls.saveBtn}
@@ -703,7 +704,7 @@ const ls = StyleSheet.create({
     maxHeight: '95%',
     paddingTop: 12,
     paddingHorizontal: 20,
-    shadowColor: '#7C3AED',
+    shadowColor: '#0891B2',
     shadowOffset: { width: 0, height: -8 },
     shadowOpacity: 0.12,
     shadowRadius: 24,
@@ -745,22 +746,22 @@ const ls = StyleSheet.create({
     borderRadius: RADIUS.lg,
     padding: 14,
     borderWidth: 1.5,
-    borderColor: '#EDE9FE',
+    borderColor: '#E0F7FA',
     alignItems: 'center',
     gap: 4,
   },
-  timeCardActive: { borderColor: '#7C3AED', backgroundColor: '#F3EEFF' },
+  timeCardActive: { borderColor: '#0891B2', backgroundColor: '#F3EEFF' },
   timeCardActiveAmber: { borderColor: '#F59E0B', backgroundColor: '#FFFBEB' },
   timeCardIcon: {
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: '#EDE9FE',
+    backgroundColor: '#E0F7FA',
     alignItems: 'center',
     justifyContent: 'center',
   },
   timeCardLabel: { fontSize: 11, color: COLORS.textMuted, fontWeight: '600', letterSpacing: 0.5 },
-  timeCardValue: { fontSize: 18, fontWeight: '800', color: '#7C3AED', letterSpacing: -0.5 },
+  timeCardValue: { fontSize: 18, fontWeight: '800', color: '#0891B2', letterSpacing: -0.5 },
   timeArrow: { alignItems: 'center', justifyContent: 'center', paddingBottom: 8 },
 
   // Picker
@@ -769,7 +770,7 @@ const ls = StyleSheet.create({
   pickerTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#7C3AED',
+    color: '#0891B2',
     letterSpacing: 0.8,
     marginBottom: 4,
   },
@@ -828,7 +829,7 @@ const AlarmCard: React.FC<{
   onEdit: () => void;
 }> = ({ item, onToggle, onDelete, onEdit }) => {
   const grad: [string, string] =
-    item.type === 'bedtime' ? ['#7C3AED', '#4F46E5'] : ['#F59E0B', '#EF4444'];
+    item.type === 'bedtime' ? ['#0891B2', '#0E7490'] : ['#F59E0B', '#EF4444'];
   const Icon = item.type === 'bedtime' ? IconMoon : IconAlarm;
   const days = item.days ?? [];
   const daysLabel =
@@ -894,12 +895,8 @@ const AlarmCard: React.FC<{
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
 const SleepScreen: React.FC = () => {
-  const mainScrollRef = useRef<ScrollView>(null);
-  useFocusEffect(
-    useCallback(() => {
-      mainScrollRef.current?.scrollTo({ y: 0, animated: false });
-    }, [])
-  );
+  const mainScrollRef = useScrollToTopOnTabPress();
+  useFocusEffect(useCallback(() => {}, []));
   const [slp0, slp1, slp2, slp3] = useEntranceAnimation(4, { initialDelay: 60, stagger: 110 });
   const {
     schedules,
@@ -998,20 +995,190 @@ const SleepScreen: React.FC = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* Header */}
+      {/* Fixed hero */}
       <Animated.View style={entranceStyle(slp0)}>
-        <View style={s.header}>
-          <View>
-            <Text style={s.headerTitle}>Sleep Tracker</Text>
-            <Text style={s.headerSub}>Track your rest & alarms</Text>
+        <LinearGradient
+          colors={['#0C2340', '#0891B2']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={s.header}
+        >
+          {/* Decorative circles */}
+          <View
+            style={{
+              position: 'absolute',
+              width: 200,
+              height: 200,
+              borderRadius: 100,
+              top: -60,
+              right: -50,
+              backgroundColor: 'rgba(255,255,255,0.06)',
+            }}
+          />
+          <View
+            style={{
+              position: 'absolute',
+              width: 120,
+              height: 120,
+              borderRadius: 60,
+              bottom: -30,
+              left: -30,
+              backgroundColor: 'rgba(255,255,255,0.04)',
+            }}
+          />
+
+          {/* Title + Log Sleep button */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginTop: 7,
+            }}
+          >
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff' }}>Sleep Tracker</Text>
+            <TouchableOpacity
+              onPress={() => setShowLogModal(true)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 20,
+                backgroundColor: 'rgba(255,255,255,0.15)',
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.25)',
+              }}
+            >
+              <IconBed size={13} color="#fff" strokeWidth={2} />
+              <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>Log Sleep</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={() => setShowLogModal(true)} style={s.logBtn}>
-            <IconBed size={15} color="#7C3AED" strokeWidth={2} />
-            <Text style={s.logBtnTxt}>Log Sleep</Text>
-          </TouchableOpacity>
-        </View>
+
+          {/* Bottom two rows — tight together */}
+          <View style={{ gap: 10 }}>
+            {/* Bedtime / Wake row */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <View style={{ alignItems: 'center', flex: 1 }}>
+                <View
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 }}
+                >
+                  <IconMoon size={12} color="rgba(186,230,253,0.8)" />
+                  <Text
+                    style={{
+                      fontSize: 9,
+                      fontWeight: '700',
+                      color: 'rgba(186,230,253,0.7)',
+                      letterSpacing: 0.8,
+                    }}
+                  >
+                    BEDTIME
+                  </Text>
+                </View>
+                <Text
+                  style={{ fontSize: 22, fontWeight: '900', color: '#fff', letterSpacing: -0.5 }}
+                >
+                  {bedtimeSchedule ? fmt12(bedtimeSchedule.time) : '--:--'}
+                </Text>
+              </View>
+
+              {/* Duration pill */}
+              <View style={{ alignItems: 'center', paddingHorizontal: 12 }}>
+                <View
+                  style={{
+                    backgroundColor: 'rgba(255,255,255,0.12)',
+                    borderRadius: 20,
+                    paddingHorizontal: 14,
+                    paddingVertical: 6,
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,255,255,0.2)',
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>
+                    {sleepDuration ? durationLabel(sleepDuration) : '-- h'}
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 9, color: 'rgba(186,230,253,0.6)', marginTop: 4 }}>
+                  planned
+                </Text>
+              </View>
+
+              <View style={{ alignItems: 'center', flex: 1 }}>
+                <View
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 }}
+                >
+                  <IconAlarm size={12} color="rgba(252,211,77,0.8)" />
+                  <Text
+                    style={{
+                      fontSize: 9,
+                      fontWeight: '700',
+                      color: 'rgba(186,230,253,0.7)',
+                      letterSpacing: 0.8,
+                    }}
+                  >
+                    WAKE UP
+                  </Text>
+                </View>
+                <Text
+                  style={{ fontSize: 22, fontWeight: '900', color: '#FCD34D', letterSpacing: -0.5 }}
+                >
+                  {alarmSchedule ? fmt12(alarmSchedule.time) : '--:--'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Stat chips */}
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {[
+                {
+                  label: 'LAST NIGHT',
+                  value: lastNight ? durationLabel(lastHrs + mins / 60) : '--',
+                },
+                { label: 'GOAL', value: `${SLEEP_GOAL_HRS}h` },
+                { label: 'AVG / WEEK', value: weekAvg > 0 ? `${weekAvg.toFixed(1)}h` : '--' },
+              ].map((chip, i) => (
+                <View
+                  key={i}
+                  style={{
+                    flex: 1,
+                    alignItems: 'center',
+                    paddingVertical: 10,
+                    backgroundColor: 'rgba(255,255,255,0.1)',
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,255,255,0.15)',
+                  }}
+                >
+                  <Text
+                    style={{ fontSize: 14, fontWeight: '800', color: '#fff', letterSpacing: -0.3 }}
+                  >
+                    {chip.value}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 9,
+                      fontWeight: '600',
+                      color: 'rgba(186,230,253,0.7)',
+                      marginTop: 3,
+                      letterSpacing: 0.4,
+                    }}
+                  >
+                    {chip.label}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </LinearGradient>
       </Animated.View>
 
       <ScrollView
@@ -1020,42 +1187,8 @@ const SleepScreen: React.FC = () => {
         automaticallyAdjustContentInsets={false}
         contentInsetAdjustmentBehavior="never"
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: 110, paddingHorizontal: 20 }}
+        contentContainerStyle={{ paddingBottom: 110, paddingHorizontal: 20, paddingTop: 20 }}
       >
-        {/* ── Bedtime / Wake summary ── */}
-        <Animated.View style={entranceStyle(slp1)}>
-          {bedtimeSchedule && alarmSchedule && (
-            <View style={s.summaryCard}>
-              <View style={{ flex: 1, alignItems: 'center' }}>
-                <View style={[s.summaryIconWrap, { backgroundColor: COLORS.tintPurple }]}>
-                  <IconMoon size={18} color="#A78BFA" />
-                </View>
-                <Text style={s.summaryLabel}>BEDTIME</Text>
-                <Text style={s.summaryTime}>{fmt12(bedtimeSchedule.time)}</Text>
-              </View>
-
-              <View style={{ alignItems: 'center', paddingHorizontal: 12 }}>
-                <View style={s.durationPill}>
-                  <Text style={s.durationPillTxt}>
-                    {sleepDuration ? durationLabel(sleepDuration) : '--'}
-                  </Text>
-                </View>
-
-                <Text style={{ color: COLORS.textMuted, fontSize: 10, marginTop: 4 }}>planned</Text>
-              </View>
-
-              <View style={{ flex: 1, alignItems: 'center' }}>
-                <View style={[s.summaryIconWrap, { backgroundColor: COLORS.tintAmber }]}>
-                  <IconAlarm size={18} color="#FCD34D" />
-                </View>
-                <Text style={s.summaryLabel}>WAKE UP</Text>
-                <Text style={[s.summaryTime, { color: '#F59E0B' }]}>
-                  {fmt12(alarmSchedule.time)}
-                </Text>
-              </View>
-            </View>
-          )}
-        </Animated.View>
         {/* ── Last night stats ── */}
         <Animated.View style={entranceStyle(slp2)}>
           {/* Stats: ring left + two stat cells right */}
@@ -1066,8 +1199,8 @@ const SleepScreen: React.FC = () => {
                 size={96}
                 strokeWidth={9}
                 progress={sleepProgress}
-                gradientColors={['#7C3AED', '#A78BFA']}
-                trackColor="#EDE9FE"
+                gradientColors={['#0891B2', '#38BDF8']}
+                trackColor="#E0F7FA"
                 centerContent={
                   <View style={{ alignItems: 'center' }}>
                     <Text style={{ fontSize: 20, fontWeight: '900', color: COLORS.text }}>
@@ -1138,7 +1271,7 @@ const SleepScreen: React.FC = () => {
               }}
               style={s.addBtn}
             >
-              <IconPlus size={14} color="#A78BFA" strokeWidth={2.5} />
+              <IconPlus size={14} color="#38BDF8" strokeWidth={2.5} />
               <Text style={s.addBtnTxt}>Add</Text>
             </TouchableOpacity>
           </View>
@@ -1199,27 +1332,15 @@ const SleepScreen: React.FC = () => {
 
 const s = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingTop: 56,
     paddingHorizontal: 24,
-    paddingBottom: 16,
+    paddingBottom: 40,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    overflow: 'hidden',
+    height: 280,
+    justifyContent: 'space-between',
   },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: COLORS.text, letterSpacing: -0.5 },
-  headerSub: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
-  logBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: COLORS.tintPurple,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  logBtnTxt: { color: COLORS.primary, fontSize: 13, fontWeight: '600' },
 
   summaryCard: {
     borderRadius: RADIUS.xl,
@@ -1230,7 +1351,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
     backgroundColor: COLORS.bgCard,
-    shadowColor: '#7C3AED',
+    shadowColor: '#0891B2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.07,
     shadowRadius: 16,
@@ -1251,7 +1372,7 @@ const s = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 4,
   },
-  summaryTime: { fontSize: 20, fontWeight: '800', color: '#A78BFA', letterSpacing: -0.5 },
+  summaryTime: { fontSize: 20, fontWeight: '800', color: '#38BDF8', letterSpacing: -0.5 },
   durationPill: {
     backgroundColor: COLORS.tintPurple,
     borderRadius: 20,
@@ -1272,7 +1393,7 @@ const s = StyleSheet.create({
     borderColor: COLORS.border,
     marginBottom: 12,
     padding: 18,
-    shadowColor: '#7C3AED',
+    shadowColor: '#0891B2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.07,
     shadowRadius: 16,
@@ -1297,7 +1418,7 @@ const s = StyleSheet.create({
     marginBottom: 3,
   },
   statsCellValue: { fontSize: 22, fontWeight: '800', color: COLORS.text, letterSpacing: -0.5 },
-  statsCellUnit: { fontSize: 13, fontWeight: '600', color: '#A78BFA' },
+  statsCellUnit: { fontSize: 13, fontWeight: '600', color: '#38BDF8' },
   statsCellSub: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
   statsCellEmpty: { fontSize: 13, color: COLORS.textMuted, marginTop: 4 },
 

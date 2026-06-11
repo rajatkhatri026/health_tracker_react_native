@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
 export const PREMIUM_KEY = '@nexara_is_premium';
 
@@ -26,9 +27,17 @@ export function usePremium() {
     setLoading(false);
   }, []);
 
+  // Read on mount
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  // Re-read every time the screen comes into focus (e.g. returning from Paywall)
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
 
   return { isPremium, loading, refresh };
 }

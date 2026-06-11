@@ -1,34 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { getPremiumStatus } from '../../hooks/usePremium';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useAuth } from '../../context/AuthContext';
+import { useSubscription } from '../../hooks/useSubscription';
 import PremiumGate from './PremiumGate';
 import { COLORS } from '../../utils/theme';
 
-/**
- * HOC that wraps a screen with a premium gate.
- * If the user is not premium, shows the PremiumGate bottom sheet
- * and navigates back when dismissed.
- */
 export function withPremiumGate<P extends object>(
   WrappedScreen: React.ComponentType<P>,
   featureName: string
 ) {
   return function PremiumGatedScreen(props: P) {
     const navigation = useNavigation();
-    const [loading, setLoading] = useState(true);
-    const [isPremium, setIsPremium] = useState(false);
-    const [gateVisible, setGateVisible] = useState(false);
+    const { user } = useAuth();
+    const { refresh } = useSubscription();
+    const [checked, setChecked] = useState(false);
+    const [isActive, setIsActive] = useState(false);
 
-    useEffect(() => {
-      getPremiumStatus().then((v) => {
-        setIsPremium(v);
-        setLoading(false);
-        if (!v) setGateVisible(true);
-      });
-    }, []);
+    useFocusEffect(
+      useCallback(() => {
+        // Wait until user is loaded before checking subscription
+        if (!user) return;
+        refresh().then((latest) => {
+          setIsActive(latest.isActive || latest.isPaid);
+          setChecked(true);
+        });
+      }, [refresh, user])
+    );
 
-    if (loading) {
+    // Still loading user or subscription
+    if (!user || !checked) {
       return (
         <View
           style={{
@@ -43,16 +44,13 @@ export function withPremiumGate<P extends object>(
       );
     }
 
-    if (!isPremium) {
+    if (!isActive) {
       return (
         <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
           <PremiumGate
-            visible={gateVisible}
+            visible={true}
             featureName={featureName}
-            onClose={() => {
-              setGateVisible(false);
-              setTimeout(() => navigation.goBack(), 320);
-            }}
+            onClose={() => setTimeout(() => navigation.goBack(), 320)}
           />
         </View>
       );

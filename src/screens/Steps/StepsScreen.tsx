@@ -8,8 +8,10 @@ import {
   Linking,
   Animated,
 } from 'react-native';
-import { useEntranceAnimation, entranceStyle } from '../../hooks/useEntranceAnimation';
 import Svg, { Circle, Defs, LinearGradient as SvgGrad, Stop } from 'react-native-svg';
+import { useEntranceAnimation, entranceStyle } from '../../hooks/useEntranceAnimation';
+import { useScrollToTopOnTabPress } from '../../hooks/useScrollToTopOnTabPress';
+
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSteps } from '../../hooks/useSteps';
@@ -36,14 +38,13 @@ const StepsScreen: React.FC = () => {
   } = useSteps();
 
   const [ss0, ss1, ss2, ss3] = useEntranceAnimation(4, { initialDelay: 60, stagger: 110 });
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useScrollToTopOnTabPress();
   const refreshRef = React.useRef(refresh);
   React.useEffect(() => {
     refreshRef.current = refresh;
   }, [refresh]);
   useFocusEffect(
     useCallback(() => {
-      scrollRef.current?.scrollTo({ y: 0, animated: false });
       refreshRef.current();
     }, [])
   );
@@ -51,9 +52,9 @@ const StepsScreen: React.FC = () => {
   const maxSteps = Math.max(...weeklySteps.map((d) => d.steps), goalSteps, 1);
   const pct = Math.round(progress * 100);
 
-  // Ring progress
-  const R = 90;
-  const stroke = 14;
+  // Ring
+  const R = 66;
+  const stroke = 12;
   const circumference = 2 * Math.PI * R;
   const strokeDash = circumference * Math.min(progress, 1);
 
@@ -72,7 +73,167 @@ const StepsScreen: React.FC = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+
+      {/* Hero — fixed, not scrollable */}
+      <Animated.View style={entranceStyle(ss0)}>
+        <LinearGradient
+          colors={['#0C2340', '#0891B2']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            height: 280,
+            paddingTop: 56,
+            paddingHorizontal: 24,
+            paddingBottom: 16,
+            borderBottomLeftRadius: 32,
+            borderBottomRightRadius: 32,
+            overflow: 'hidden',
+          }}
+        >
+          {/* Decorative circles */}
+          <View
+            style={{
+              position: 'absolute',
+              width: 200,
+              height: 200,
+              borderRadius: 100,
+              top: -60,
+              right: -50,
+              backgroundColor: 'rgba(255,255,255,0.06)',
+            }}
+          />
+          <View
+            style={{
+              position: 'absolute',
+              width: 120,
+              height: 120,
+              borderRadius: 60,
+              bottom: -30,
+              left: -30,
+              backgroundColor: 'rgba(255,255,255,0.04)',
+            }}
+          />
+
+          {/* Title */}
+          <Text
+            style={{
+              fontSize: 18,
+              fontWeight: '800',
+              color: '#fff',
+              marginBottom: 16,
+              marginTop: 7,
+            }}
+          >
+            Step Tracker
+          </Text>
+
+          {/* Ring (left) + chips (right) */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+            {/* Ring — 160×160 */}
+            <View
+              style={{ alignItems: 'center', justifyContent: 'center', width: 160, height: 160 }}
+            >
+              <Svg width={160} height={160} viewBox="0 0 160 160">
+                <Defs>
+                  <SvgGrad id="stepGrad" x1="0" y1="0" x2="1" y2="1">
+                    <Stop offset="0" stopColor="#fff" />
+                    <Stop offset="1" stopColor="rgba(186,230,253,0.85)" />
+                  </SvgGrad>
+                </Defs>
+                <Circle
+                  cx={80}
+                  cy={80}
+                  r={R}
+                  stroke="rgba(255,255,255,0.15)"
+                  strokeWidth={stroke}
+                  fill="none"
+                />
+                <Circle
+                  cx={80}
+                  cy={80}
+                  r={R}
+                  stroke="url(#stepGrad)"
+                  strokeWidth={stroke}
+                  fill="none"
+                  strokeDasharray={`${strokeDash} ${circumference}`}
+                  strokeLinecap="round"
+                  transform="rotate(-90 80 80)"
+                />
+              </Svg>
+              <View style={{ position: 'absolute', alignItems: 'center' }}>
+                <Text
+                  style={{ fontSize: 26, fontWeight: '900', color: '#fff', letterSpacing: -1.2 }}
+                >
+                  {formatSteps(todaySteps)}
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 10,
+                    color: 'rgba(186,230,253,0.8)',
+                    fontWeight: '600',
+                    marginTop: 2,
+                  }}
+                >
+                  steps today
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontWeight: '800',
+                    color: 'rgba(186,230,253,0.9)',
+                    marginTop: 4,
+                  }}
+                >
+                  {pct}%
+                </Text>
+              </View>
+            </View>
+
+            {/* Chips */}
+            <View style={{ flex: 1, gap: 10 }}>
+              {[
+                { label: 'GOAL', value: formatSteps(goalSteps) },
+                { label: 'REMAINING', value: formatSteps(Math.max(goalSteps - todaySteps, 0)) },
+                { label: 'THIS WEEK', value: formatSteps(weekTotal) },
+              ].map((s, i) => (
+                <View
+                  key={i}
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    backgroundColor: 'rgba(255,255,255,0.1)',
+                    borderRadius: 12,
+                    paddingHorizontal: 14,
+                    paddingVertical: 9,
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,255,255,0.15)',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 9,
+                      fontWeight: '700',
+                      color: 'rgba(186,230,253,0.7)',
+                      letterSpacing: 0.5,
+                    }}
+                  >
+                    {s.label}
+                  </Text>
+                  <Text
+                    style={{ fontSize: 15, fontWeight: '800', color: '#fff', letterSpacing: -0.3 }}
+                  >
+                    {s.value}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </LinearGradient>
+      </Animated.View>
+
+      {/* Scrollable content */}
       <ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
@@ -81,91 +242,6 @@ const StepsScreen: React.FC = () => {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: 110 }}
       >
-        {/* Header */}
-        <Animated.View style={entranceStyle(ss0)}>
-          <LinearGradient
-            colors={['#F4F5FA', '#F4F5FA']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{
-              paddingTop: 56,
-              paddingHorizontal: 24,
-              paddingBottom: 32,
-              borderBottomLeftRadius: 32,
-              borderBottomRightRadius: 32,
-            }}
-          >
-            <Text style={{ fontSize: 18, fontWeight: '800', color: COLORS.text, marginBottom: 24 }}>
-              Step Tracker
-            </Text>
-
-            {/* Ring */}
-            <View style={{ alignItems: 'center', marginBottom: 12 }}>
-              <Svg width={220} height={220} viewBox="0 0 220 220">
-                <Defs>
-                  <SvgGrad id="stepGrad" x1="0" y1="0" x2="1" y2="0">
-                    <Stop offset="0" stopColor="#7C3AED" />
-                    <Stop offset="1" stopColor="#06B6D4" />
-                  </SvgGrad>
-                </Defs>
-                {/* Track */}
-                <Circle cx={110} cy={110} r={R} stroke="#F0EEFF" strokeWidth={stroke} fill="none" />
-                {/* Progress */}
-                <Circle
-                  cx={110}
-                  cy={110}
-                  r={R}
-                  stroke="url(#stepGrad)"
-                  strokeWidth={stroke}
-                  fill="none"
-                  strokeDasharray={`${strokeDash} ${circumference}`}
-                  strokeLinecap="round"
-                  transform="rotate(-90 110 110)"
-                />
-              </Svg>
-              {/* Center text overlay */}
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Text
-                  style={{ fontSize: 44, fontWeight: '900', color: COLORS.text, letterSpacing: -2 }}
-                >
-                  {formatSteps(todaySteps)}
-                </Text>
-                <Text style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 2 }}>
-                  steps today
-                </Text>
-                <Text style={{ fontSize: 13, color: '#A78BFA', fontWeight: '700', marginTop: 4 }}>
-                  {pct}% of goal
-                </Text>
-              </View>
-            </View>
-
-            {/* Goal row */}
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: 8,
-              }}
-            >
-              <Text style={{ color: COLORS.textMuted, fontSize: 13 }}>Daily goal:</Text>
-              <Text style={{ color: '#A78BFA', fontSize: 13, fontWeight: '700' }}>
-                {goalSteps.toLocaleString()} steps
-              </Text>
-            </View>
-          </LinearGradient>
-        </Animated.View>
-
         <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
           {/* Not supported banner */}
           {!supported && (
@@ -179,11 +255,13 @@ const StepsScreen: React.FC = () => {
               <Text style={{ color: COLORS.textMuted, fontSize: 12, lineHeight: 18 }}>
                 Step counting requires a native dev build.{'\n'}
                 Run{' '}
-                <Text style={{ color: '#A78BFA', fontFamily: 'monospace' }}>
+                <Text style={{ color: COLORS.primary, fontFamily: 'monospace' }}>
                   npx expo run:android
                 </Text>{' '}
                 or{' '}
-                <Text style={{ color: '#A78BFA', fontFamily: 'monospace' }}>npx expo run:ios</Text>{' '}
+                <Text style={{ color: COLORS.primary, fontFamily: 'monospace' }}>
+                  npx expo run:ios
+                </Text>{' '}
                 to enable real step tracking.
               </Text>
             </GlassCard>
@@ -206,7 +284,7 @@ const StepsScreen: React.FC = () => {
                 style={{ marginTop: 10 }}
               >
                 <LinearGradient
-                  colors={['#7C3AED', '#06B6D4']}
+                  colors={['#0891B2', '#06B6D4']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={{
@@ -228,7 +306,7 @@ const StepsScreen: React.FC = () => {
           <Animated.View style={entranceStyle(ss1)}>
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
               {[
-                { label: 'Week Total', value: formatSteps(weekTotal), color: '#A78BFA' },
+                { label: 'Week Total', value: formatSteps(weekTotal), color: COLORS.primary },
                 { label: 'Daily Avg', value: formatSteps(weekAvg), color: '#06B6D4' },
                 { label: 'Goal Days', value: `${activeDays}/7`, color: '#10B981' },
               ].map((s) => (
@@ -251,11 +329,16 @@ const StepsScreen: React.FC = () => {
           {/* Weekly bar chart */}
           <Animated.View style={entranceStyle(ss2)}>
             <GlassCard padding={16} style={{ marginBottom: 20 }}>
-              <Text
-                style={{ fontSize: 13, fontWeight: '700', color: COLORS.text, marginBottom: 16 }}
+              <View
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}
               >
-                This Week
-              </Text>
+                <View
+                  style={{ width: 4, height: 16, borderRadius: 2, backgroundColor: COLORS.primary }}
+                />
+                <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.text }}>
+                  This Week
+                </Text>
+              </View>
               <View
                 style={{
                   flexDirection: 'row',
@@ -283,7 +366,7 @@ const StepsScreen: React.FC = () => {
                         <Text
                           style={{
                             fontSize: 9,
-                            color: metGoal ? '#10B981' : '#A78BFA',
+                            color: metGoal ? '#10B981' : COLORS.primary,
                             fontWeight: '700',
                             marginBottom: 3,
                           }}
@@ -296,10 +379,10 @@ const StepsScreen: React.FC = () => {
                         <LinearGradient
                           colors={
                             isToday
-                              ? ['#7C3AED', '#06B6D4']
+                              ? ['#0891B2', '#06B6D4']
                               : metGoal
                                 ? ['#059669', '#10B981']
-                                : ['#F0EEFF', '#F0EEFF']
+                                : ['#E0F7FA', '#BAE6FD']
                           }
                           start={{ x: 0, y: 1 }}
                           end={{ x: 0, y: 0 }}
@@ -309,14 +392,16 @@ const StepsScreen: React.FC = () => {
                       <Text
                         style={{
                           fontSize: 10,
-                          color: isToday ? '#A78BFA' : COLORS.textMuted,
+                          color: isToday ? COLORS.primary : COLORS.textMuted,
                           marginTop: 5,
                           fontWeight: isToday ? '700' : '400',
                         }}
                       >
                         {DAYS[dayIdx].slice(0, 2)}
                       </Text>
-                      <Text style={{ fontSize: 9, color: isToday ? '#A78BFA' : COLORS.textMuted }}>
+                      <Text
+                        style={{ fontSize: 9, color: isToday ? COLORS.primary : COLORS.textMuted }}
+                      >
                         {new Date(d.date + 'T12:00:00').getDate()}
                       </Text>
                     </View>
@@ -337,17 +422,22 @@ const StepsScreen: React.FC = () => {
           {/* Goal setter */}
           <Animated.View style={entranceStyle(ss3)}>
             <GlassCard padding={16} style={{ marginBottom: 20 }}>
-              <Text
-                style={{ fontSize: 13, fontWeight: '700', color: COLORS.text, marginBottom: 14 }}
+              <View
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}
               >
-                Daily Goal
-              </Text>
+                <View
+                  style={{ width: 4, height: 16, borderRadius: 2, backgroundColor: COLORS.primary }}
+                />
+                <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.text }}>
+                  Daily Goal
+                </Text>
+              </View>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 {[5000, 7500, 8000, 10000, 12000, 15000].map((g) => (
                   <TouchableOpacity key={g} onPress={() => setGoal(g)}>
                     {goalSteps === g ? (
                       <LinearGradient
-                        colors={['#7C3AED', '#06B6D4']}
+                        colors={['#0891B2', '#06B6D4']}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={{
@@ -389,7 +479,7 @@ const StepsScreen: React.FC = () => {
                 >
                   🏆 Best Day This Week
                 </Text>
-                <Text style={{ fontSize: 28, fontWeight: '900', color: '#A78BFA' }}>
+                <Text style={{ fontSize: 28, fontWeight: '900', color: COLORS.primary }}>
                   {bestDay.steps.toLocaleString()}
                 </Text>
                 <Text style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>
@@ -404,11 +494,16 @@ const StepsScreen: React.FC = () => {
 
             {/* How it works */}
             <GlassCard padding={16}>
-              <Text
-                style={{ fontSize: 13, fontWeight: '700', color: COLORS.text, marginBottom: 10 }}
+              <View
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}
               >
-                How it works
-              </Text>
+                <View
+                  style={{ width: 4, height: 16, borderRadius: 2, backgroundColor: COLORS.primary }}
+                />
+                <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.text }}>
+                  How it works
+                </Text>
+              </View>
               {[
                 {
                   icon: '📱',

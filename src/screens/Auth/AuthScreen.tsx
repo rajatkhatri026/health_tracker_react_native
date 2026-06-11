@@ -1,15 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  TouchableOpacity,
   StatusBar,
   Dimensions,
   Animated,
+  TouchableOpacity,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useEntranceAnimation, entranceStyle } from '../../hooks/useEntranceAnimation';
 import Svg, {
@@ -24,10 +22,8 @@ import Svg, {
   Line,
 } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { useAuth } from '../../context/AuthContext';
-import { getDefaultCountry, validatePhone } from '../../utils/countryCodes';
-import { RADIUS } from '../../utils/theme';
-import { IconPhone, IconCheck } from '../../components/icons/Icons';
 import NexaraLogo from '../../components/NexaraLogo/NexaraLogo';
 import LegalModal from '../../components/LegalModal/LegalModal';
 import {
@@ -38,44 +34,7 @@ import {
 } from '../../utils/legalContent';
 
 const { width, height } = Dimensions.get('window');
-const DEFAULT_COUNTRY = getDefaultCountry();
 const HERO_H = height * 0.3;
-
-// ── Google logo ──────────────────────────────────────────────────────────────
-const GoogleLogo: React.FC<{ size?: number }> = ({ size = 20 }) => (
-  <Svg width={size} height={size} viewBox="0 0 48 48">
-    <Path
-      fill="#EA4335"
-      d="M24 9.5c3.2 0 5.9 1.1 8.1 2.9l6-6C34.5 3.1 29.6 1 24 1 14.8 1 6.9 6.4 3.2 14.3l7 5.4C12 13.6 17.5 9.5 24 9.5z"
-    />
-    <Path
-      fill="#4285F4"
-      d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.5 2.9-2.2 5.4-4.7 7l7.3 5.7c4.3-4 6.7-9.9 7.2-16.7z"
-    />
-    <Path
-      fill="#FBBC05"
-      d="M10.2 28.6A14.8 14.8 0 019.5 24c0-1.6.3-3.1.7-4.6l-7-5.4A23.9 23.9 0 000 24c0 3.9.9 7.5 2.6 10.7l7.6-6.1z"
-    />
-    <Path
-      fill="#34A853"
-      d="M24 47c5.6 0 10.3-1.8 13.7-5l-7.3-5.7c-1.9 1.3-4.4 2.1-6.4 2.1-6.5 0-12-4.1-14-9.8l-7.6 6.1C6.9 41.6 14.8 47 24 47z"
-    />
-  </Svg>
-);
-
-// ── Facebook logo ────────────────────────────────────────────────────────────
-const FacebookLogo: React.FC<{ size?: number }> = ({ size = 20 }) => (
-  <Svg width={size} height={size} viewBox="0 0 48 48">
-    <Path
-      fill="#1877F2"
-      d="M48 24C48 10.7 37.3 0 24 0S0 10.7 0 24c0 12 8.8 21.9 20.2 23.7V30.9h-6.1V24h6.1v-5.3c0-6 3.6-9.3 9-9.3 2.6 0 5.4.5 5.4.5v5.9h-3c-3 0-3.9 1.8-3.9 3.7V24h6.6l-1.1 6.9h-5.6v16.8C39.2 45.9 48 36 48 24z"
-    />
-    <Path
-      fill="#fff"
-      d="M33.3 30.9l1.1-6.9h-6.6v-4.5c0-1.9.9-3.7 3.9-3.7h3v-5.9s-2.7-.5-5.4-.5c-5.4 0-9 3.3-9 9.3V24h-6.1v6.9h6.1v16.8a24.1 24.1 0 007.5 0V30.9h5.5z"
-    />
-  </Svg>
-);
 
 // ── Hero decorative SVG ───────────────────────────────────────────────────────
 const HeroDecor: React.FC = () => (
@@ -83,8 +42,8 @@ const HeroDecor: React.FC = () => (
     <Defs>
       {/* Large soft orb top-right */}
       <RadialGradient id="h1" cx="85%" cy="10%" r="55%">
-        <Stop offset="0%" stopColor="#C4B5FD" stopOpacity="0.45" />
-        <Stop offset="100%" stopColor="#7C3AED" stopOpacity="0" />
+        <Stop offset="0%" stopColor="#7DD3E8" stopOpacity="0.45" />
+        <Stop offset="100%" stopColor="#0891B2" stopOpacity="0" />
       </RadialGradient>
       {/* Cyan orb bottom-left */}
       <RadialGradient id="h2" cx="10%" cy="90%" r="50%">
@@ -95,7 +54,7 @@ const HeroDecor: React.FC = () => (
       <SvgGrad id="shimmer" x1="0%" y1="0%" x2="100%" y2="0%">
         <Stop offset="0%" stopColor="rgba(255,255,255,0)" />
         <Stop offset="30%" stopColor="rgba(255,255,255,0.35)" />
-        <Stop offset="70%" stopColor="rgba(167,139,250,0.5)" />
+        <Stop offset="70%" stopColor="rgba(125,211,232,0.5)" />
         <Stop offset="100%" stopColor="rgba(255,255,255,0)" />
       </SvgGrad>
     </Defs>
@@ -148,413 +107,202 @@ const HeroDecor: React.FC = () => (
   </Svg>
 );
 
+// Google logo SVG
+const GoogleLogo = () => (
+  <Svg width={20} height={20} viewBox="0 0 48 48">
+    <Path
+      fill="#EA4335"
+      d="M24 9.5c3.14 0 5.95 1.08 8.17 2.86l6.09-6.09C34.46 3.19 29.5 1 24 1 14.82 1 7.07 6.48 3.64 14.24l7.08 5.5C12.43 13.72 17.74 9.5 24 9.5z"
+    />
+    <Path
+      fill="#4285F4"
+      d="M46.1 24.55c0-1.64-.15-3.22-.42-4.74H24v8.98h12.42c-.54 2.9-2.18 5.36-4.65 7.01l7.18 5.57C43.27 37.28 46.1 31.36 46.1 24.55z"
+    />
+    <Path
+      fill="#FBBC05"
+      d="M10.72 28.26A14.55 14.55 0 0 1 9.5 24c0-1.48.25-2.91.72-4.26l-7.08-5.5A23.93 23.93 0 0 0 0 24c0 3.87.93 7.53 2.58 10.76l7.14-5.5z"
+    />
+    <Path
+      fill="#34A853"
+      d="M24 47c5.5 0 10.12-1.82 13.49-4.95l-7.18-5.57c-1.82 1.22-4.15 1.95-6.31 1.95-6.26 0-11.57-4.22-13.28-9.93l-7.14 5.5C7.07 41.52 14.82 47 24 47z"
+    />
+  </Svg>
+);
+
 const AuthScreen: React.FC = () => {
-  const [au0, au1, au2, au3] = useEntranceAnimation(4, { initialDelay: 60, stagger: 100 });
-  const { sendOtp, verifyOtp } = useAuth();
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const [au0, au1, au2] = useEntranceAnimation(3, { initialDelay: 60, stagger: 120 });
+  const { signInWithGoogle, signInWithApple } = useAuth();
+  const [loadingGoogle, setLoadingGoogle] = useState(false);
+  const [loadingApple, setLoadingApple] = useState(false);
+  const [error, setError] = useState('');
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [otp, setOtp] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [devOtp, setDevOtp] = useState<string | undefined>();
-  const [phoneFocused, setPhoneFocused] = useState(false);
 
-  const fullPhone = `${DEFAULT_COUNTRY.code}${phoneNumber.trim()}`;
-
-  const handleSendOtp = async () => {
-    const digits = phoneNumber.trim().replace(/\s|-/g, '');
-    const phoneError = validatePhone(digits, DEFAULT_COUNTRY);
-    if (phoneError) {
-      setError(phoneError);
-      return;
-    }
-    setLoading(true);
+  const handleGoogle = async () => {
     setError('');
+    setLoadingGoogle(true);
     try {
-      const { devOtp: d } = await sendOtp(fullPhone);
-      setDevOtp(d);
-      setStep('otp');
+      await signInWithGoogle();
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? e?.message ?? 'Failed to send OTP. Please try again.');
+      const isCancel =
+        e?.code === 'SIGN_IN_CANCELLED' || e?.code === '-5' || e?.message === 'SIGN_IN_CANCELLED';
+      if (!isCancel) {
+        setError('Sign-in failed. Please try again.');
+      }
     } finally {
-      setLoading(false);
+      setLoadingGoogle(false);
     }
   };
 
-  const handleVerifyOtp = async () => {
-    if (otp.length !== 4) {
-      setError('Enter the 4-digit code');
-      return;
-    }
-    setLoading(true);
+  const handleApple = async () => {
     setError('');
+    setLoadingApple(true);
     try {
-      await verifyOtp(fullPhone, otp);
+      await signInWithApple();
     } catch (e: any) {
-      setError(
-        e?.response?.data?.message ??
-          (e?.message?.includes('Network')
-            ? 'Cannot reach server. Check your connection.'
-            : null) ??
-          e?.message ??
-          'Something went wrong. Please try again.'
-      );
+      if (e?.code !== 'ERR_REQUEST_CANCELED') {
+        setError('Sign-in failed. Please try again.');
+      }
     } finally {
-      setLoading(false);
+      setLoadingApple(false);
     }
   };
 
-  // ── Shared hero section ────────────────────────────────────────────────────
-  const Hero = (
-    <LinearGradient
-      colors={['#1E0B3E', '#5B21B6', '#0C4A6E']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={{
-        height: HERO_H,
-        width: '100%',
-        justifyContent: 'flex-end',
-        paddingHorizontal: 28,
-        paddingBottom: 28,
-      }}
-    >
-      <HeroDecor />
-      {/* Logo with glow shadow */}
-      <View
-        style={{
-          shadowColor: '#A78BFA',
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 0.9,
-          shadowRadius: 24,
-          elevation: 10,
-        }}
-      >
-        <NexaraLogo size={46} variant="full" showText />
-      </View>
-      {/* Tagline — aligned to start of wordmark (icon 46 + gap ~10) */}
-      <Text
-        style={{
-          fontSize: 13,
-          color: 'rgba(196,181,253,0.85)',
-          marginTop: -4,
-          marginLeft: 56,
-          fontWeight: '500',
-          letterSpacing: 0.4,
-        }}
-      >
-        Your intelligent health companion
-      </Text>
-    </LinearGradient>
-  );
-
-  // ── OTP Step ───────────────────────────────────────────────────────────────
-  if (step === 'otp') {
-    return (
-      <KeyboardAvoidingView
-        style={{ flex: 1, backgroundColor: '#F4F5FA' }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <StatusBar barStyle="light-content" />
-        {Hero}
-
-        {/* Form card */}
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 32, paddingBottom: 40 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-            <View
-              style={{
-                backgroundColor: '#EDE9FE',
-                borderRadius: 20,
-                paddingHorizontal: 12,
-                paddingVertical: 5,
-              }}
-            >
-              <Text
-                style={{ color: '#7C3AED', fontSize: 11, fontWeight: '700', letterSpacing: 0.6 }}
-              >
-                STEP 2 OF 2
-              </Text>
-            </View>
-          </View>
-
-          <Text
-            style={{
-              fontSize: 24,
-              fontWeight: '800',
-              color: '#0F0F1A',
-              letterSpacing: -0.4,
-              marginBottom: 6,
-            }}
-          >
-            Verify your number
-          </Text>
-          <Text
-            style={{
-              fontSize: 14,
-              color: '#6B7280',
-              lineHeight: 22,
-              marginBottom: devOtp ? 16 : 28,
-            }}
-          >
-            We sent a 4-digit code to{' '}
-            <Text style={{ color: '#7C3AED', fontWeight: '700' }}>{fullPhone}</Text>
-          </Text>
-
-          {devOtp && (
-            <View
-              style={{
-                backgroundColor: '#F0FDF4',
-                borderWidth: 1,
-                borderColor: '#BBF7D0',
-                borderRadius: 14,
-                padding: 14,
-                marginBottom: 24,
-              }}
-            >
-              <Text style={{ color: '#15803D', fontSize: 11, fontWeight: '700', marginBottom: 4 }}>
-                DEV MODE — Your OTP
-              </Text>
-              <Text style={{ color: '#14532D', fontSize: 28, fontWeight: '900', letterSpacing: 8 }}>
-                {devOtp}
-              </Text>
-            </View>
-          )}
-
-          {/* OTP boxes */}
-          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 10 }}>
-            {Array.from({ length: 4 }).map((_, i) => (
-              <View
-                key={i}
-                style={{
-                  flex: 1,
-                  height: 64,
-                  borderRadius: 18,
-                  backgroundColor: otp[i] ? '#EDE9FE' : '#fff',
-                  borderWidth: 2,
-                  borderColor: otp[i] ? '#7C3AED' : '#E4E7F0',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  shadowColor: otp[i] ? '#7C3AED' : '#000',
-                  shadowOffset: { width: 0, height: 3 },
-                  shadowOpacity: otp[i] ? 0.15 : 0.05,
-                  shadowRadius: 8,
-                  elevation: 3,
-                }}
-              >
-                <Text style={{ color: '#0F0F1A', fontSize: 24, fontWeight: '800' }}>
-                  {otp[i] ?? ''}
-                </Text>
-              </View>
-            ))}
-          </View>
-
-          <TextInput
-            style={{ position: 'absolute', opacity: 0, height: 64, top: 280, left: 0, right: 0 }}
-            value={otp}
-            onChangeText={(v) => {
-              setOtp(v.replace(/\D/g, '').slice(0, 4));
-              setError('');
-            }}
-            keyboardType="numeric"
-            maxLength={4}
-            autoFocus
-          />
-
-          <Text style={{ fontSize: 13, color: '#9CA3AF', marginBottom: 24 }}>
-            Didn&apos;t receive the code?{' '}
-            <Text
-              style={{ color: loading ? '#9CA3AF' : '#7C3AED', fontWeight: '700' }}
-              onPress={loading ? undefined : handleSendOtp}
-            >
-              Resend
-            </Text>
-          </Text>
-
-          {error ? (
-            <View
-              style={{
-                backgroundColor: '#FEF2F2',
-                borderWidth: 1,
-                borderColor: '#FECACA',
-                borderRadius: 12,
-                padding: 12,
-                marginBottom: 16,
-              }}
-            >
-              <Text style={{ color: '#EF4444', fontSize: 13 }}>{error}</Text>
-            </View>
-          ) : null}
-
-          <LinearGradient
-            colors={['#7C3AED', '#0891B2']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={{
-              borderRadius: 16,
-              shadowColor: '#7C3AED',
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.35,
-              shadowRadius: 20,
-              elevation: 10,
-            }}
-          >
-            <TouchableOpacity
-              onPress={handleVerifyOtp}
-              disabled={loading}
-              style={{
-                height: 58,
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'row',
-                gap: 10,
-              }}
-            >
-              {!loading && <IconCheck size={18} color="#fff" />}
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>
-                {loading ? 'Verifying…' : 'Verify & Continue'}
-              </Text>
-            </TouchableOpacity>
-          </LinearGradient>
-
-          <TouchableOpacity
-            onPress={() => {
-              setStep('phone');
-              setOtp('');
-              setError('');
-            }}
-            disabled={loading}
-            style={{ marginTop: 18, alignItems: 'center', opacity: loading ? 0.4 : 1 }}
-          >
-            <Text style={{ color: '#6B7280', fontSize: 14 }}>← Change Number</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    );
-  }
-
-  // ── Phone Step ────────────────────────────────────────────────────────────
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: '#F4F5FA' }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
       <StatusBar barStyle="light-content" />
 
-      {/* Hero */}
-      <Animated.View style={entranceStyle(au0)}>{Hero}</Animated.View>
-
-      {/* Form area */}
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 32, paddingBottom: 40 }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Heading */}
-        <Animated.View style={[entranceStyle(au1), { marginBottom: 28 }]}>
-          <Text
+      {/* Hero — 30% height, logo centered */}
+      <Animated.View style={[entranceStyle(au0), { height: height * 0.3 }]}>
+        <LinearGradient
+          colors={['#0C2340', '#0891B2', '#0C4A6E']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            flex: 1,
+            justifyContent: 'flex-end',
+            paddingHorizontal: 28,
+            paddingBottom: height * 0.3 * 0.18,
+          }}
+        >
+          <HeroDecor />
+          <View
             style={{
-              fontSize: 11,
-              fontWeight: '700',
-              color: '#7C3AED',
-              letterSpacing: 1,
-              marginBottom: 8,
+              shadowColor: '#38BDF8',
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.9,
+              shadowRadius: 28,
+              elevation: 12,
+              alignItems: 'flex-start',
             }}
           >
-            WELCOME TO NEXARA
-          </Text>
+            <NexaraLogo size={52} variant="full" showText textSize={36} />
+            <Text
+              style={{
+                fontSize: 13,
+                color: 'rgba(186,230,253,0.8)',
+                marginTop: -4,
+                fontWeight: '500',
+                letterSpacing: 0.4,
+                marginLeft: 62,
+              }}
+            >
+              Your Health, Your Way.
+            </Text>
+          </View>
+        </LinearGradient>
+      </Animated.View>
+
+      {/* Lower section — plain background, content naturally placed */}
+      <View style={{ flex: 1, paddingHorizontal: 28, paddingTop: 36, paddingBottom: 32 }}>
+        {/* Title */}
+        <Animated.View style={[entranceStyle(au1), { marginBottom: 32 }]}>
           <Text
             style={{
               fontSize: 26,
               fontWeight: '800',
               color: '#0F0F1A',
               letterSpacing: -0.5,
-              marginBottom: 8,
+              marginBottom: 6,
             }}
           >
             Sign in or Sign up
           </Text>
-          <Text style={{ fontSize: 14, color: '#6B7280', lineHeight: 22 }}>
-            Enter your phone number to get started.{'\n'}New? We&apos;ll create your account
-            automatically.
+          <Text style={{ fontSize: 15, color: '#6B7280', lineHeight: 22 }}>
+            One tap to get started. No password needed.
           </Text>
         </Animated.View>
 
-        {/* Phone input */}
-        <Animated.View style={entranceStyle(au2)}>
-          <Text
-            style={{
-              fontSize: 11,
-              fontWeight: '700',
-              color: '#6B7280',
-              letterSpacing: 0.8,
-              marginBottom: 8,
-            }}
-          >
-            PHONE NUMBER
-          </Text>
-          <View
+        {/* Buttons */}
+        <Animated.View style={[entranceStyle(au2), { gap: 12 }]}>
+          {/* Google */}
+          <TouchableOpacity
+            onPress={handleGoogle}
+            disabled={loadingGoogle || loadingApple}
+            activeOpacity={0.85}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              backgroundColor: '#fff',
-              borderWidth: 2,
-              borderColor: phoneFocused ? '#7C3AED' : '#E4E7F0',
+              justifyContent: 'center',
+              gap: 12,
+              height: 56,
               borderRadius: 16,
-              paddingHorizontal: 16,
-              height: 58,
-              marginBottom: 8,
-              shadowColor: phoneFocused ? '#7C3AED' : '#000',
-              shadowOffset: { width: 0, height: 3 },
-              shadowOpacity: phoneFocused ? 0.12 : 0.05,
-              shadowRadius: 10,
+              backgroundColor: '#fff',
+              borderWidth: 1.5,
+              borderColor: '#E4E7F0',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.06,
+              shadowRadius: 8,
               elevation: 3,
+              opacity: loadingGoogle ? 0.6 : 1,
             }}
           >
-            <Text style={{ fontSize: 20, marginRight: 8 }}>{DEFAULT_COUNTRY.flag}</Text>
-            <Text
+            {loadingGoogle ? <ActivityIndicator size="small" color="#4285F4" /> : <GoogleLogo />}
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#0F0F1A' }}>
+              Continue with Google
+            </Text>
+          </TouchableOpacity>
+
+          {/* Apple — iOS only */}
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity
+              onPress={handleApple}
+              disabled={loadingGoogle || loadingApple}
+              activeOpacity={0.85}
               style={{
-                fontSize: 15,
-                fontWeight: '700',
-                color: '#0F0F1A',
-                marginRight: 12,
-                paddingRight: 12,
-                borderRightWidth: 1.5,
-                borderRightColor: '#E4E7F0',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 12,
+                height: 56,
+                borderRadius: 16,
+                backgroundColor: '#0F0F1A',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.15,
+                shadowRadius: 8,
+                elevation: 3,
+                opacity: loadingApple ? 0.6 : 1,
               }}
             >
-              {DEFAULT_COUNTRY.code}
-            </Text>
-            <TextInput
-              style={{ flex: 1, fontSize: 15, color: '#0F0F1A', marginLeft: 8 }}
-              value={phoneNumber}
-              onChangeText={(v) => {
-                setPhoneNumber(v.replace(/[^\d\s-]/g, ''));
-                setError('');
-              }}
-              placeholder="Phone number"
-              placeholderTextColor="#C4C9D4"
-              keyboardType="phone-pad"
-              returnKeyType="done"
-              maxLength={DEFAULT_COUNTRY.maxDigits + 2}
-              onSubmitEditing={handleSendOtp}
-              onFocus={() => setPhoneFocused(true)}
-              onBlur={() => setPhoneFocused(false)}
-            />
-          </View>
+              {loadingApple ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Svg width={18} height={18} viewBox="0 0 814 1000">
+                  <Path
+                    fill="#fff"
+                    d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-37.5-155.5-104.5C159.6 829.5 96 696.3 96 570.7c0-211.3 137.7-323.3 275.1-323.3 70.3 0 128.9 46.3 172.4 46.3 41.8 0 107.5-49 188.2-49 30.4 0 130.9 2.6 198.3 99.2zm-234-181.5c31.1-36.9 53.1-88.1 53.1-139.3 0-7.1-.6-14.3-1.9-20.1-50.6 1.9-110.8 33.7-147.1 75.8-28.5 32.4-55.1 83.6-55.1 135.5 0 7.8 1.3 15.6 1.9 18.1 3.2.6 8.4 1.3 13.6 1.3 45.4 0 102.5-30.4 135.5-71.3z"
+                  />
+                </Svg>
+              )}
+              <Text style={{ fontSize: 16, fontWeight: '600', color: '#fff' }}>
+                Continue with Apple
+              </Text>
+            </TouchableOpacity>
+          )}
 
-          <Text style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 20, lineHeight: 18 }}>
-            {DEFAULT_COUNTRY.minDigits === DEFAULT_COUNTRY.maxDigits
-              ? `${DEFAULT_COUNTRY.name} numbers are ${DEFAULT_COUNTRY.minDigits} digits.`
-              : `${DEFAULT_COUNTRY.name} numbers are ${DEFAULT_COUNTRY.minDigits}–${DEFAULT_COUNTRY.maxDigits} digits.`}
-          </Text>
-
+          {/* Error */}
           {error ? (
             <View
               style={{
@@ -563,126 +311,39 @@ const AuthScreen: React.FC = () => {
                 borderColor: '#FECACA',
                 borderRadius: 12,
                 padding: 12,
-                marginBottom: 16,
               }}
             >
-              <Text style={{ color: '#EF4444', fontSize: 13 }}>{error}</Text>
+              <Text style={{ color: '#EF4444', fontSize: 13, textAlign: 'center' }}>{error}</Text>
             </View>
           ) : null}
-        </Animated.View>
-
-        {/* CTA + social */}
-        <Animated.View style={entranceStyle(au3)}>
-          <LinearGradient
-            colors={['#7C3AED', '#0891B2']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={{
-              borderRadius: 16,
-              shadowColor: '#7C3AED',
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.35,
-              shadowRadius: 20,
-              elevation: 10,
-            }}
-          >
-            <TouchableOpacity
-              onPress={handleSendOtp}
-              disabled={loading}
-              style={{
-                height: 58,
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'row',
-                gap: 10,
-              }}
-            >
-              <IconPhone size={18} color="#fff" />
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>
-                {loading ? 'Sending…' : 'Continue with Phone'}
-              </Text>
-            </TouchableOpacity>
-          </LinearGradient>
-
-          {/* Divider */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 24 }}>
-            <View style={{ flex: 1, height: 1, backgroundColor: '#E4E7F0' }} />
-            <Text style={{ fontSize: 11, color: '#9CA3AF', fontWeight: '600', letterSpacing: 0.5 }}>
-              OR
-            </Text>
-            <View style={{ flex: 1, height: 1, backgroundColor: '#E4E7F0' }} />
-          </View>
-
-          {/* Social buttons */}
-          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 28 }}>
-            <TouchableOpacity
-              style={{
-                flex: 1,
-                height: 54,
-                borderRadius: 14,
-                borderWidth: 1.5,
-                borderColor: '#E4E7F0',
-                backgroundColor: '#fff',
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.06,
-                shadowRadius: 6,
-                elevation: 2,
-              }}
-              activeOpacity={0.75}
-            >
-              <GoogleLogo size={20} />
-              <Text style={{ color: '#0F0F1A', fontSize: 14, fontWeight: '600' }}>Google</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={{
-                flex: 1,
-                height: 54,
-                borderRadius: 14,
-                borderWidth: 1.5,
-                borderColor: '#E4E7F0',
-                backgroundColor: '#fff',
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.06,
-                shadowRadius: 6,
-                elevation: 2,
-              }}
-              activeOpacity={0.75}
-            >
-              <FacebookLogo size={20} />
-              <Text style={{ color: '#0F0F1A', fontSize: 14, fontWeight: '600' }}>Facebook</Text>
-            </TouchableOpacity>
-          </View>
 
           {/* Terms */}
-          <Text style={{ textAlign: 'center', fontSize: 12, color: '#9CA3AF', lineHeight: 18 }}>
+          <Text
+            style={{
+              textAlign: 'center',
+              fontSize: 12,
+              color: '#9CA3AF',
+              lineHeight: 18,
+              marginTop: 4,
+            }}
+          >
             By continuing you agree to our{' '}
             <Text
-              style={{ color: '#7C3AED', fontWeight: '600' }}
+              style={{ color: '#0891B2', fontWeight: '600' }}
               onPress={() => setShowTerms(true)}
             >
               Terms of Service
             </Text>{' '}
             and{' '}
             <Text
-              style={{ color: '#7C3AED', fontWeight: '600' }}
+              style={{ color: '#0891B2', fontWeight: '600' }}
               onPress={() => setShowPrivacy(true)}
             >
               Privacy Policy
             </Text>
           </Text>
         </Animated.View>
-      </ScrollView>
+      </View>
 
       <LegalModal
         visible={showTerms}
@@ -698,7 +359,7 @@ const AuthScreen: React.FC = () => {
         effectiveDate={PRIVACY_POLICY_DATE}
         sections={PRIVACY_POLICY_SECTIONS}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 };
 

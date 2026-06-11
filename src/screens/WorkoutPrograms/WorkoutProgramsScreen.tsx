@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/refs */
 import React, { useState, useRef } from 'react';
 import {
   View,
@@ -19,12 +18,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: W } = Dimensions.get('window');
 const ACTIVE_PROGRAM_KEY = '@nexara_active_program';
+const HERO_H = 200;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface WorkoutDay {
-  name: string; // e.g. "Push A"
-  focus: string; // e.g. "Chest · Shoulders · Triceps"
-  exercises: string[]; // exercise names
+  name: string;
+  focus: string;
+  exercises: string[];
   rest: boolean;
 }
 interface Week {
@@ -35,12 +35,12 @@ interface Program {
   name: string;
   tag: string;
   emoji: string;
-  duration: string; // "6 weeks"
-  frequency: string; // "3×/week"
+  duration: string;
+  frequency: string;
   level: string;
   goal: string;
   description: string;
-  grad: [string, string];
+  color: string;
   weeks: Week[];
 }
 
@@ -57,7 +57,7 @@ const PROGRAMS: Program[] = [
     frequency: '6×/week',
     level: 'Intermediate',
     goal: 'Muscle & Strength',
-    grad: ['#7C3AED', '#4F46E5'],
+    color: '#0891B2',
     description:
       'The gold-standard hypertrophy program. Train each muscle group twice per week with dedicated push, pull, and leg sessions.',
     weeks: [
@@ -159,7 +159,7 @@ const PROGRAMS: Program[] = [
     frequency: '3×/week',
     level: 'Beginner',
     goal: 'Raw Strength',
-    grad: ['#EF4444', '#DC2626'],
+    color: '#EF4444',
     description:
       'The most proven strength program for beginners. Three compound lifts per session, alternating A and B workouts, adding weight every session.',
     weeks: [
@@ -200,7 +200,7 @@ const PROGRAMS: Program[] = [
     frequency: '3×/week',
     level: 'Beginner',
     goal: 'General Fitness',
-    grad: ['#10B981', '#059669'],
+    color: '#10B981',
     description:
       'Hit every muscle group three times per week with compound movements. Perfect for beginners building a foundation.',
     weeks: [
@@ -262,7 +262,7 @@ const PROGRAMS: Program[] = [
     frequency: '4×/week',
     level: 'Intermediate',
     goal: 'Fat Loss & Cardio',
-    grad: ['#F59E0B', '#D97706'],
+    color: '#F59E0B',
     description:
       'High-intensity interval training designed to maximise calorie burn. Short rest, high output. Combine with a calorie deficit for rapid results.',
     weeks: [
@@ -327,13 +327,19 @@ const PROGRAMS: Program[] = [
   },
 ];
 
+const LEVEL_COLOR: Record<string, string> = {
+  Beginner: '#10B981',
+  Intermediate: '#F59E0B',
+  Advanced: '#EF4444',
+};
+
 // ── Program Card ──────────────────────────────────────────────────────────────
 const ProgramCard: React.FC<{ program: Program; isActive: boolean; onPress: () => void }> = ({
   program,
   isActive,
   onPress,
 }) => {
-  const scale = useRef(new Animated.Value(1)).current;
+  const [scale] = useState(() => new Animated.Value(1));
   const onIn = () =>
     Animated.spring(scale, {
       toValue: 0.97,
@@ -349,46 +355,66 @@ const ProgramCard: React.FC<{ program: Program; isActive: boolean; onPress: () =
       friction: 10,
     }).start();
 
+  const workDays = program.weeks[0].days.filter((d) => !d.rest).length;
+  const levelColor = LEVEL_COLOR[program.level] ?? '#0891B2';
+
   return (
     <TouchableOpacity onPress={onPress} onPressIn={onIn} onPressOut={onOut} activeOpacity={1}>
-      <Animated.View style={{ transform: [{ scale }] }}>
-        <LinearGradient
-          colors={program.grad}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={p.card}
-        >
-          {/* Active indicator */}
-          {isActive && (
-            <View style={p.activePill}>
-              <Text style={p.activeTxt}>▶ ACTIVE</Text>
+      <Animated.View style={[c.card, { transform: [{ scale }] }]}>
+        {/* Left accent bar */}
+        <View style={[c.accentBar, { backgroundColor: program.color }]} />
+
+        <View style={c.cardInner}>
+          {/* Top row */}
+          <View style={c.cardTop}>
+            <View style={[c.emojiWrap, { backgroundColor: program.color + '18' }]}>
+              <Text style={{ fontSize: 28 }}>{program.emoji}</Text>
             </View>
-          )}
-          <View style={p.cardTop}>
-            <View style={p.tagCircle}>
-              <Text style={p.tagTxt}>{program.emoji}</Text>
-            </View>
-            <View style={{ flex: 1, marginLeft: 14 }}>
-              <Text style={p.cardName}>{program.name}</Text>
-              <Text style={p.cardGoal}>{program.goal}</Text>
+            <View style={{ flex: 1 }}>
+              <View style={c.nameRow}>
+                <Text style={c.cardName}>{program.name}</Text>
+                {isActive && (
+                  <View style={[c.activePill, { backgroundColor: program.color }]}>
+                    <Text style={c.activeTxt}>▶ ACTIVE</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={c.cardGoal}>{program.goal}</Text>
             </View>
           </View>
-          <Text style={p.cardDesc} numberOfLines={2}>
+
+          {/* Description */}
+          <Text style={c.cardDesc} numberOfLines={2}>
             {program.description}
           </Text>
-          <View style={p.statsRow}>
+
+          {/* Stats row */}
+          <View style={c.statsRow}>
             {[
               { icon: '📅', val: program.duration },
               { icon: '⚡', val: program.frequency },
-              { icon: '🎯', val: program.level },
+              { icon: '🏋️', val: `${workDays} days/wk` },
             ].map((s, i) => (
-              <View key={i} style={p.statChip}>
-                <Text style={{ fontSize: 11 }}>{s.icon}</Text>
-                <Text style={p.statVal}>{s.val}</Text>
+              <View key={i} style={c.statChip}>
+                <Text style={{ fontSize: 10 }}>{s.icon}</Text>
+                <Text style={c.statVal}>{s.val}</Text>
               </View>
             ))}
+            <View
+              style={[
+                c.levelPill,
+                { backgroundColor: levelColor + '18', borderColor: levelColor + '40' },
+              ]}
+            >
+              <Text style={[c.levelTxt, { color: levelColor }]}>{program.level}</Text>
+            </View>
           </View>
-        </LinearGradient>
+        </View>
+
+        {/* Chevron */}
+        <View style={c.chevronWrap}>
+          <Text style={[c.chevron, { color: program.color }]}>›</Text>
+        </View>
       </Animated.View>
     </TouchableOpacity>
   );
@@ -407,115 +433,160 @@ const ProgramDetail: React.FC<{
   return (
     <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
-        <StatusBar barStyle="dark-content" />
+        <StatusBar barStyle="light-content" />
+
         {/* Header */}
         <LinearGradient
-          colors={program.grad}
+          colors={['#0C2340', program.color]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={[m.header, { paddingTop: insets.top + 8 }]}
+          style={[d.header, { paddingTop: insets.top + 12 }]}
         >
-          <TouchableOpacity onPress={onClose} style={m.closeBtn} activeOpacity={0.8}>
-            <Text style={{ fontSize: 13, color: '#fff', fontWeight: '700' }}>✕</Text>
-          </TouchableOpacity>
-          <View style={{ alignItems: 'center', paddingTop: 8, paddingBottom: 20 }}>
-            <Text style={{ fontSize: 48, marginBottom: 10 }}>{program.emoji}</Text>
-            <Text style={m.headerTitle}>{program.name}</Text>
-            <Text style={m.headerSub}>{program.goal}</Text>
-            <View style={m.statsRow}>
-              {[program.duration, program.frequency, program.level].map((v, i) => (
-                <View key={i} style={m.statPill}>
-                  <Text style={m.statPillTxt}>{v}</Text>
-                </View>
-              ))}
+          {/* Decorative circles */}
+          <View
+            style={[d.deco, { width: 180, height: 180, top: -50, right: -40, opacity: 0.08 }]}
+          />
+          <View
+            style={[d.deco, { width: 100, height: 100, bottom: 0, left: -20, opacity: 0.06 }]}
+          />
+
+          <View style={d.headerTopRow}>
+            <TouchableOpacity onPress={onClose} style={d.closeBtn} activeOpacity={0.8}>
+              <Text style={d.closeTxt}>‹</Text>
+            </TouchableOpacity>
+            <View style={{ flex: 1 }} />
+            {isActive && (
+              <View style={d.activeChip}>
+                <Text style={d.activeChipTxt}>▶ ACTIVE</Text>
+              </View>
+            )}
+          </View>
+
+          <View style={d.headerBody}>
+            <View style={[d.emojiCircle, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
+              <Text style={{ fontSize: 36 }}>{program.emoji}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={d.headerTitle}>{program.name}</Text>
+              <Text style={d.headerGoal}>{program.goal}</Text>
+              <View style={d.headerChips}>
+                {[program.duration, program.frequency, program.level].map((v, i) => (
+                  <View key={i} style={d.headerChip}>
+                    <Text style={d.headerChipTxt}>{v}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
           </View>
         </LinearGradient>
 
         <ScrollView
           showsVerticalScrollIndicator={false}
-          automaticallyAdjustContentInsets={false}
-          contentInsetAdjustmentBehavior="never"
-          contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 120, paddingTop: 16 }}
         >
-          {/* Description */}
-          <View style={m.section}>
-            <Text style={m.sectionTitle}>About this Program</Text>
-            <Text style={m.descTxt}>{program.description}</Text>
+          {/* About */}
+          <View style={d.section}>
+            <View style={d.sectionHeader}>
+              <View style={[d.sectionDot, { backgroundColor: program.color }]} />
+              <Text style={d.sectionTitle}>About this Program</Text>
+            </View>
+            <Text style={d.descTxt}>{program.description}</Text>
           </View>
 
           {/* Weekly schedule */}
-          <View style={m.section}>
-            <Text style={m.sectionTitle}>Weekly Schedule</Text>
+          <View style={d.section}>
+            <View style={d.sectionHeader}>
+              <View style={[d.sectionDot, { backgroundColor: program.color }]} />
+              <Text style={d.sectionTitle}>Weekly Schedule</Text>
+            </View>
             {week.days.map((day, i) => (
               <View
                 key={i}
                 style={[
-                  m.dayRow,
+                  d.dayRow,
                   i < week.days.length - 1 && {
                     borderBottomWidth: 1,
                     borderBottomColor: COLORS.border,
                   },
                 ]}
               >
-                <View style={[m.dayBadge, day.rest && m.dayBadgeRest]}>
-                  <Text style={[m.dayBadgeTxt, day.rest && { color: COLORS.textMuted }]}>
+                <View
+                  style={[
+                    d.dayNum,
+                    day.rest
+                      ? { backgroundColor: COLORS.bgInput }
+                      : { backgroundColor: program.color + '20' },
+                  ]}
+                >
+                  <Text
+                    style={[d.dayNumTxt, { color: day.rest ? COLORS.textMuted : program.color }]}
+                  >
                     {i + 1}
                   </Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[m.dayName, day.rest && { color: COLORS.textMuted }]}>
+                  <Text style={[d.dayName, day.rest && { color: COLORS.textMuted }]}>
                     {day.name}
                   </Text>
-                  {!day.rest && <Text style={m.dayFocus}>{day.focus}</Text>}
+                  {!day.rest && <Text style={d.dayFocus}>{day.focus}</Text>}
                 </View>
                 {!day.rest && (
-                  <Text style={[m.dayCount, { color: program.grad[0] }]}>
-                    {day.exercises.length} moves
-                  </Text>
+                  <View style={[d.moveBadge, { backgroundColor: program.color + '15' }]}>
+                    <Text style={[d.moveTxt, { color: program.color }]}>
+                      {day.exercises.length} moves
+                    </Text>
+                  </View>
                 )}
               </View>
             ))}
           </View>
 
-          {/* Sample day */}
+          {/* Sample workout */}
           {week.days
             .filter((d) => !d.rest)
             .slice(0, 1)
             .map((day, i) => (
-              <View key={i} style={m.section}>
-                <Text style={m.sectionTitle}>Sample: {day.name}</Text>
+              <View key={i} style={d.section}>
+                <View style={d.sectionHeader}>
+                  <View style={[d.sectionDot, { backgroundColor: program.color }]} />
+                  <Text style={d.sectionTitle}>Sample: {day.name}</Text>
+                </View>
                 {day.exercises.map((ex, j) => (
-                  <View key={j} style={m.exRow}>
+                  <View
+                    key={j}
+                    style={[
+                      d.exRow,
+                      j < day.exercises.length - 1 && {
+                        borderBottomWidth: 1,
+                        borderBottomColor: COLORS.border,
+                      },
+                    ]}
+                  >
                     <LinearGradient
-                      colors={program.grad}
+                      colors={['#0C2340', program.color]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
-                      style={m.exNum}
+                      style={d.exNum}
                     >
-                      <Text style={m.exNumTxt}>{j + 1}</Text>
+                      <Text style={d.exNumTxt}>{j + 1}</Text>
                     </LinearGradient>
-                    <Text style={m.exTxt}>{ex}</Text>
+                    <Text style={d.exTxt}>{ex}</Text>
                   </View>
                 ))}
               </View>
             ))}
         </ScrollView>
 
-        {/* Start CTA */}
-        <View style={[m.ctaWrap, { paddingBottom: insets.bottom + 16 }]}>
-          <TouchableOpacity
-            onPress={onStart}
-            activeOpacity={0.88}
-            style={{ borderRadius: RADIUS.full, overflow: 'hidden' }}
-          >
+        {/* CTA */}
+        <View style={[d.ctaWrap, { paddingBottom: insets.bottom + 16 }]}>
+          <TouchableOpacity onPress={onStart} activeOpacity={0.88}>
             <LinearGradient
-              colors={program.grad}
+              colors={['#0C2340', program.color]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={m.ctaBtn}
+              style={d.ctaBtn}
             >
-              <Text style={m.ctaTxt}>
+              <Text style={d.ctaTxt}>
                 {isActive ? '✓ Currently Active' : `Start ${program.name}`}
               </Text>
             </LinearGradient>
@@ -545,46 +616,85 @@ export default function WorkoutProgramsScreen() {
     setDetail(null);
   };
 
-  return (
-    <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
-      <StatusBar barStyle="dark-content" />
+  const activeProgram = PROGRAMS.find((p) => p.id === activeId);
 
-      {/* Header */}
-      <View style={[sc.header, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={sc.backBtn}
-          activeOpacity={0.8}
+  return (
+    <View style={s.screen}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+
+      {/* ── Fixed Gradient Hero ── */}
+      <View style={s.heroWrap}>
+        <LinearGradient
+          colors={['#0C2340', '#0891B2']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[s.heroGrad, { paddingTop: insets.top + 12 }]}
         >
-          <Text style={sc.backArrow}>‹</Text>
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={sc.title}>Workout Programs</Text>
-          <Text style={sc.sub}>Structured plans to follow daily</Text>
-        </View>
-        <View style={sc.countBadge}>
-          <Text style={sc.countTxt}>{PROGRAMS.length} plans</Text>
-        </View>
+          <View
+            style={[s.deco, { width: 200, height: 200, top: -60, right: -50, opacity: 0.08 }]}
+          />
+          <View
+            style={[s.deco, { width: 120, height: 120, bottom: -20, left: -30, opacity: 0.06 }]}
+          />
+
+          {/* Top row */}
+          <View style={s.topRow}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={s.backBtn}
+              activeOpacity={0.8}
+            >
+              <Text style={s.backArrow}>‹</Text>
+            </TouchableOpacity>
+            <View style={s.topTitleWrap} pointerEvents="none">
+              <Text style={s.heroTitle}>Workout Programs</Text>
+              <Text style={s.heroSub}>Structured plans to follow daily</Text>
+            </View>
+            <View style={s.countBadge}>
+              <Text style={s.countTxt}>{PROGRAMS.length}</Text>
+            </View>
+          </View>
+
+          {/* Stats row */}
+          <View style={s.heroStats}>
+            {[
+              { label: 'PROGRAMS', value: `${PROGRAMS.length}` },
+              { label: 'LEVELS', value: '3' },
+              { label: 'MAX WEEKS', value: '8' },
+              { label: 'ACTIVE', value: activeProgram ? '1' : '0' },
+            ].map((item) => (
+              <View key={item.label} style={s.heroStat}>
+                <Text style={s.heroStatVal}>{item.value}</Text>
+                <Text style={s.heroStatLabel}>{item.label}</Text>
+              </View>
+            ))}
+          </View>
+        </LinearGradient>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        automaticallyAdjustContentInsets={false}
-        contentInsetAdjustmentBehavior="never"
-        contentContainerStyle={{ padding: 20, gap: 14, paddingBottom: insets.bottom + 40 }}
+        style={{ marginTop: HERO_H }}
+        contentContainerStyle={{ padding: 20, gap: 12, paddingBottom: insets.bottom + 40 }}
       >
-        {activeId && (
-          <View style={sc.activeBanner}>
-            <Text style={sc.activeBannerTxt}>
-              🏃 Active: {PROGRAMS.find((p) => p.id === activeId)?.name ?? activeId}
-            </Text>
+        {/* Active banner */}
+        {activeProgram && (
+          <View style={s.activeBanner}>
+            <View style={[s.activeDot, { backgroundColor: activeProgram.color }]} />
+            <View style={{ flex: 1 }}>
+              <Text style={s.activeBannerLabel}>ACTIVE PROGRAM</Text>
+              <Text style={s.activeBannerName}>
+                {activeProgram.emoji} {activeProgram.name}
+              </Text>
+            </View>
             <TouchableOpacity
               onPress={() => {
                 AsyncStorage.removeItem(ACTIVE_PROGRAM_KEY);
                 setActiveId(null);
               }}
+              style={s.stopBtn}
             >
-              <Text style={{ fontSize: 11, color: '#7C3AED', fontWeight: '700' }}>Stop</Text>
+              <Text style={s.stopTxt}>Stop</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -612,151 +722,234 @@ export default function WorkoutProgramsScreen() {
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
-const sc = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+
+const s = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: COLORS.bg },
+  heroWrap: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, height: HERO_H },
+  heroGrad: {
+    height: HERO_H,
     paddingHorizontal: 20,
-    paddingBottom: 14,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    overflow: 'hidden',
+    justifyContent: 'space-between',
   },
+  deco: { position: 'absolute', borderRadius: 999, backgroundColor: '#fff' },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  topTitleWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   backBtn: {
-    width: 38,
-    height: 38,
+    width: 34,
+    height: 34,
     borderRadius: 12,
-    backgroundColor: COLORS.bgInput,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 1,
   },
-  backArrow: { fontSize: 22, color: COLORS.text, lineHeight: 26 },
-  title: { fontSize: 19, fontWeight: '900', color: COLORS.text, letterSpacing: -0.5 },
-  sub: { fontSize: 12, color: COLORS.textMuted, marginTop: 1 },
+  backArrow: { fontSize: 22, color: '#fff', lineHeight: 26 },
+  heroTitle: { fontSize: 17, fontWeight: '900', color: '#fff', letterSpacing: -0.4 },
+  heroSub: { fontSize: 11, color: 'rgba(186,230,253,0.85)', marginTop: 2 },
   countBadge: {
-    backgroundColor: '#EDE9FE',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: RADIUS.full,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: '#DDD6FE',
+    width: 34,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
   },
-  countTxt: { fontSize: 11, fontWeight: '800', color: '#7C3AED' },
+  countTxt: { fontSize: 13, fontWeight: '900', color: '#fff' },
+  heroStats: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderRadius: 16,
+    padding: 14,
+    gap: 0,
+  },
+  heroStat: { flex: 1, alignItems: 'center' },
+  heroStatVal: { fontSize: 20, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
+  heroStatLabel: {
+    fontSize: 8,
+    fontWeight: '700',
+    color: 'rgba(186,230,253,0.75)',
+    letterSpacing: 0.5,
+    marginTop: 2,
+  },
+
+  // Active banner
   activeBanner: {
-    backgroundColor: '#EDE9FE',
-    borderRadius: 14,
+    backgroundColor: '#fff',
+    borderRadius: 16,
     padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 12,
     borderWidth: 1,
-    borderColor: '#DDD6FE',
+    borderColor: COLORS.border,
+    shadowColor: '#0891B2',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  activeBannerTxt: { fontSize: 13, fontWeight: '700', color: '#7C3AED' },
+  activeDot: { width: 10, height: 10, borderRadius: 5 },
+  activeBannerLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: COLORS.textMuted,
+    letterSpacing: 0.8,
+  },
+  activeBannerName: { fontSize: 14, fontWeight: '800', color: COLORS.text, marginTop: 2 },
+  stopBtn: {
+    backgroundColor: '#FEE2E2',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  stopTxt: { fontSize: 11, fontWeight: '800', color: '#EF4444' },
 });
 
-const p = StyleSheet.create({
-  card: { borderRadius: 22, padding: 20 },
-  activePill: {
-    position: 'absolute',
-    top: 14,
-    right: 14,
-    backgroundColor: 'rgba(255,255,255,0.25)',
+// Program card
+const c = StyleSheet.create({
+  card: {
+    backgroundColor: '#fff',
     borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  activeTxt: { fontSize: 9, fontWeight: '900', color: '#fff', letterSpacing: 0.5 },
-  cardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  tagCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  accentBar: { width: 4 },
+  cardInner: { flex: 1, padding: 16 },
+  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
+  emojiWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tagTxt: { fontSize: 26 },
-  cardName: { fontSize: 20, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
-  cardGoal: { fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
-  cardDesc: { fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 19, marginBottom: 16 },
-  statsRow: { flexDirection: 'row', gap: 8 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  cardName: { fontSize: 16, fontWeight: '900', color: COLORS.text, letterSpacing: -0.4 },
+  activePill: {
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  activeTxt: { fontSize: 8, fontWeight: '900', color: '#fff', letterSpacing: 0.5 },
+  cardGoal: { fontSize: 11, color: COLORS.textMuted, marginTop: 2, fontWeight: '600' },
+  cardDesc: { fontSize: 12, color: COLORS.textSub, lineHeight: 18, marginBottom: 12 },
+  statsRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', alignItems: 'center' },
   statChip: {
     flexDirection: 'row',
     gap: 4,
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  statVal: { fontSize: 11, fontWeight: '700', color: '#fff' },
-});
-
-const m = StyleSheet.create({
-  header: { paddingHorizontal: 20, paddingBottom: 4 },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'flex-end',
-  },
-  headerTitle: { fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
-  headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 4 },
-  statsRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
-  statPill: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: RADIUS.full,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-  },
-  statPillTxt: { fontSize: 11, fontWeight: '700', color: '#fff' },
-  section: {
-    margin: 16,
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 16,
+    backgroundColor: COLORS.bgInput,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: COLORS.text,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-    marginBottom: 12,
+  statVal: { fontSize: 10, fontWeight: '700', color: COLORS.textSub },
+  levelPill: {
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
   },
-  descTxt: { fontSize: 14, color: COLORS.textSub, lineHeight: 22 },
-  dayRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  dayBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 9,
-    backgroundColor: '#EDE9FE',
+  levelTxt: { fontSize: 10, fontWeight: '800' },
+  chevronWrap: { justifyContent: 'center', paddingRight: 14 },
+  chevron: { fontSize: 24, fontWeight: '300' },
+});
+
+// Detail modal
+const d = StyleSheet.create({
+  header: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: 'hidden',
+    gap: 14,
+  },
+  deco: { position: 'absolute', borderRadius: 999, backgroundColor: '#fff' },
+  headerTopRow: { flexDirection: 'row', alignItems: 'center' },
+  closeBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dayBadgeRest: { backgroundColor: COLORS.bgInput },
-  dayBadgeTxt: { fontSize: 12, fontWeight: '800', color: '#7C3AED' },
+  closeTxt: { fontSize: 22, color: '#fff', lineHeight: 26 },
+  activeChip: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  activeChipTxt: { fontSize: 9, fontWeight: '900', color: '#fff', letterSpacing: 0.5 },
+  headerBody: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  emojiCircle: {
+    width: 68,
+    height: 68,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: { fontSize: 20, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
+  headerGoal: { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 3 },
+  headerChips: { flexDirection: 'row', gap: 6, marginTop: 8 },
+  headerChip: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  headerChipTxt: { fontSize: 10, fontWeight: '700', color: '#fff' },
+  section: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 16,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    shadowColor: '#0891B2',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  sectionDot: { width: 4, height: 16, borderRadius: 2 },
+  sectionTitle: { fontSize: 13, fontWeight: '800', color: COLORS.text, letterSpacing: -0.1 },
+  descTxt: { fontSize: 14, color: COLORS.textSub, lineHeight: 22 },
+  dayRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
+  dayNum: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dayNumTxt: { fontSize: 12, fontWeight: '800' },
   dayName: { fontSize: 14, fontWeight: '800', color: COLORS.text },
   dayFocus: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
-  dayCount: { fontSize: 11, fontWeight: '700' },
-  exRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  exNum: { width: 24, height: 24, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  moveBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+  moveTxt: { fontSize: 11, fontWeight: '700' },
+  exRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9 },
+  exNum: { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   exNumTxt: { fontSize: 10, fontWeight: '900', color: '#fff' },
   exTxt: { fontSize: 14, color: COLORS.text, fontWeight: '600', flex: 1 },
   ctaWrap: {

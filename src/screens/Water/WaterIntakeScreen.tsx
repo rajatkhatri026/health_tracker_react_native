@@ -12,7 +12,9 @@ import {
   Animated,
 } from 'react-native';
 import { useEntranceAnimation, entranceStyle } from '../../hooks/useEntranceAnimation';
+import { useScrollToTopOnTabPress } from '../../hooks/useScrollToTopOnTabPress';
 import Svg, {
+  Circle,
   Defs,
   LinearGradient as SvgGrad,
   Stop,
@@ -278,7 +280,7 @@ const WaterIntakeScreen: React.FC = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useScrollToTopOnTabPress();
   const goalRef = useRef(goal);
   const intakeRef = useRef(intakeMl);
   const dateRef = useRef(selectedDate);
@@ -327,31 +329,31 @@ const WaterIntakeScreen: React.FC = () => {
   // ── Load data for a given date ───────────────────────────────────────────
   const loadDate = useCallback(
     async (date: string) => {
-      setLoading(true);
       // Read user's preferred goal (falls back to DAILY_GOAL_ML if never set)
       const prefGoalEnc = await AsyncStorage.getItem(GOAL_PREF_KEY).catch(() => null);
       const prefGoalRaw = prefGoalEnc
         ? await decryptLocal(prefGoalEnc).catch(() => prefGoalEnc)
         : null;
       const prefGoal = prefGoalRaw ? parseInt(prefGoalRaw, 10) : DAILY_GOAL_ML;
-
-      // Reset immediately so UI doesn't flash stale data
-      setIntakeMl(0);
-      setHistory([]);
       setGoal(prefGoal);
-      intakeRef.current = 0;
       goalRef.current = prefGoal;
 
       try {
-        // Local cache first for instant display
+        // Local cache first for instant display — show immediately without loading state
         const rawEnc = await AsyncStorage.getItem(`${STORAGE_KEY}_${date}`);
         const raw = rawEnc ? await decryptLocal(rawEnc).catch(() => rawEnc) : null;
         if (raw) {
           const cached = JSON.parse(raw);
-          // prefGoal always wins — it's the user's explicit preference from Preferences screen
           setIntakeMl(cached.intakeMl ?? 0);
           setHistory(cached.history ?? []);
           intakeRef.current = cached.intakeMl ?? 0;
+          setLoading(false); // hide skeleton immediately from cache
+        } else {
+          // No cache — reset and show loading
+          setIntakeMl(0);
+          setHistory([]);
+          intakeRef.current = 0;
+          setLoading(true);
         }
         // Authoritative intake from backend, but keep prefGoal as the goal
         const records = await fetchWaterRecords(date, date);
@@ -388,7 +390,6 @@ const WaterIntakeScreen: React.FC = () => {
 
   useFocusEffect(
     useCallback(() => {
-      scrollRef.current?.scrollTo({ y: 0, animated: false });
       loadDate(selectedDate);
     }, [loadDate, selectedDate])
   );
@@ -490,7 +491,7 @@ const WaterIntakeScreen: React.FC = () => {
       : fillPct >= 0.75
         ? { label: 'Almost there!', color: '#06B6D4' }
         : fillPct >= 0.5
-          ? { label: 'Halfway there', color: '#3B82F6' }
+          ? { label: 'Halfway there', color: COLORS.primary }
           : fillPct >= 0.25
             ? { label: 'Keep drinking', color: '#F59E0B' }
             : { label: 'Start hydrating', color: '#EF4444' };
@@ -506,28 +507,54 @@ const WaterIntakeScreen: React.FC = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      <ScrollView
-        ref={scrollRef}
-        scrollEnabled={scrollEnabled}
-        showsVerticalScrollIndicator={false}
-        automaticallyAdjustContentInsets={false}
-        contentInsetAdjustmentBehavior="never"
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: 110 }}
-      >
-        <Animated.View style={entranceStyle(wat0)}>
-          <LinearGradient
-            colors={['#F4F5FA', '#EEF0FF']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={s.header}
+      {/* Fixed hero */}
+      <Animated.View style={entranceStyle(wat0)}>
+        <LinearGradient
+          colors={['#0C2340', '#0891B2']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={s.header}
+        >
+          {/* Decorative circles */}
+          <View
+            style={{
+              position: 'absolute',
+              width: 200,
+              height: 200,
+              borderRadius: 100,
+              top: -60,
+              right: -50,
+              backgroundColor: 'rgba(255,255,255,0.06)',
+            }}
+          />
+          <View
+            style={{
+              position: 'absolute',
+              width: 120,
+              height: 120,
+              borderRadius: 60,
+              bottom: -30,
+              left: -30,
+              backgroundColor: 'rgba(255,255,255,0.04)',
+            }}
+          />
+
+          {/* Title row + date nav top-right */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 12,
+              marginTop: 7,
+            }}
           >
             <Text style={s.headerTitle}>Water Intake</Text>
 
-            {/* ── Date picker row ── */}
-            <View style={s.datePicker}>
+            {/* Date nav */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <TouchableOpacity
                 onPress={() => {
                   const prev = new Date(`${selectedDate}T12:00:00`);
@@ -536,12 +563,19 @@ const WaterIntakeScreen: React.FC = () => {
                 }}
                 style={s.dateArrow}
               >
-                <Text style={{ color: COLORS.text, fontSize: 18 }}>‹</Text>
+                <Text style={{ color: '#fff', fontSize: 14 }}>‹</Text>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={() => setShowDatePicker(true)} style={s.dateLabelBtn}>
                 <Text style={s.dateLabel}>{displayDate}</Text>
-                <Text style={{ color: COLORS.textMuted, fontSize: 11, marginTop: 1 }}>
+                <Text
+                  style={{
+                    color: 'rgba(186,230,253,0.75)',
+                    fontSize: 10,
+                    marginTop: 1,
+                    textAlign: 'center',
+                  }}
+                >
                   {selectedDate}
                 </Text>
               </TouchableOpacity>
@@ -557,79 +591,139 @@ const WaterIntakeScreen: React.FC = () => {
                 style={[s.dateArrow, isToday && { opacity: 0.2 }]}
                 disabled={isToday}
               >
-                <Text style={{ color: COLORS.text, fontSize: 18 }}>›</Text>
+                <Text style={{ color: '#fff', fontSize: 14 }}>›</Text>
               </TouchableOpacity>
             </View>
+          </View>
 
-            <CustomDateTimePicker
-              visible={showDatePicker}
-              value={new Date(`${selectedDate}T12:00:00`)}
-              mode="date"
-              maximumDate={new Date()}
-              onConfirm={(d) => {
-                setShowDatePicker(false);
-                onDateChange(d.toISOString().slice(0, 10));
+          <CustomDateTimePicker
+            visible={showDatePicker}
+            value={new Date(`${selectedDate}T12:00:00`)}
+            mode="date"
+            maximumDate={new Date()}
+            onConfirm={(d) => {
+              setShowDatePicker(false);
+              onDateChange(d.toISOString().slice(0, 10));
+            }}
+            onCancel={() => setShowDatePicker(false)}
+          />
+
+          {/* Glass (left) + chips (right) */}
+          <View style={{ flexDirection: 'row', alignItems: 'stretch', gap: 14, marginTop: 12 }}>
+            {/* Glass — aligned to top */}
+            <View
+              {...panResponder.panHandlers}
+              collapsable={false}
+              onLayout={(e) => {
+                dragZoneHeightRef.current = e.nativeEvent.layout.height;
               }}
-              onCancel={() => setShowDatePicker(false)}
-            />
-
-            {/* Glass */}
-            <View style={s.glassSection}>
-              <View
-                {...panResponder.panHandlers}
-                style={s.dragZone}
-                collapsable={false}
-                onLayout={(e) => {
-                  dragZoneHeightRef.current = e.nativeEvent.layout.height;
-                }}
-              >
-                <WaterGlass fillPct={fillPct} goalMl={goal} intakeMl={intakeMl} />
-              </View>
-              {isToday ? (
-                <Text style={s.swipeHint}>↕ Swipe up / down to fill</Text>
-              ) : (
-                <Text style={[s.swipeHint, { color: COLORS.amber }]}>Past date — view only</Text>
-              )}
-              <View
-                style={[
-                  s.statusBadge,
-                  { borderColor: status.color + '55', backgroundColor: status.color + '18' },
-                ]}
-              >
-                <Text style={[s.statusText, { color: status.color }]}>{status.label}</Text>
+              style={{ width: 99, overflow: 'hidden', alignSelf: 'center' }}
+            >
+              <View style={{ height: 135 }}>
+                <View
+                  style={{
+                    transform: [{ scale: 0.45 }],
+                    marginTop: -(GH * 0.275),
+                    marginLeft: -(GW * 0.275),
+                    width: GW,
+                    height: GH,
+                  }}
+                >
+                  <WaterGlass fillPct={fillPct} goalMl={goal} intakeMl={intakeMl} />
+                </View>
               </View>
             </View>
 
-            {/* Stats */}
-
-            <View style={s.statsRow}>
+            {/* Chips — stretch to fill same height as glass */}
+            <View style={{ flex: 1, justifyContent: 'center', gap: 6, paddingTop: 6 }}>
               {[
-                {
-                  label: 'Consumed',
-                  value: toDisplayVolume(intakeMl, prefs.waterUnit),
-                  color: '#3B82F6',
-                },
-                {
-                  label: 'Remaining',
-                  value: toDisplayVolume(remaining, prefs.waterUnit),
-                  color: '#06B6D4',
-                },
-                { label: 'Glasses', value: `${glasses}`, color: '#A78BFA' },
-              ].map((item) => (
-                <View key={item.label} style={s.statItem}>
-                  <Text style={[s.statValue, { color: item.color }]}>{item.value}</Text>
-                  <Text style={s.statLabel}>{item.label}</Text>
+                { label: 'CONSUMED', value: toDisplayVolume(intakeMl, prefs.waterUnit) },
+                { label: 'REMAINING', value: toDisplayVolume(remaining, prefs.waterUnit) },
+                { label: 'GLASSES', value: `${glasses}` },
+              ].map((chip, i) => (
+                <View
+                  key={i}
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    backgroundColor: 'rgba(255,255,255,0.12)',
+                    borderRadius: 10,
+                    paddingHorizontal: 10,
+                    paddingVertical: 7,
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,255,255,0.18)',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 8,
+                      fontWeight: '700',
+                      color: 'rgba(186,230,253,0.65)',
+                      letterSpacing: 0.5,
+                    }}
+                  >
+                    {chip.label}
+                  </Text>
+                  <Text
+                    style={{ fontSize: 12, fontWeight: '900', color: '#fff', letterSpacing: -0.3 }}
+                  >
+                    {chip.value}
+                  </Text>
                 </View>
               ))}
+              {isToday ? (
+                <Text style={{ fontSize: 10, color: 'rgba(186,230,253,0.45)', textAlign: 'right' }}>
+                  ↕ swipe glass to fill
+                </Text>
+              ) : (
+                <Text style={{ fontSize: 10, color: COLORS.amber, textAlign: 'right' }}>
+                  Past date — view only
+                </Text>
+              )}
             </View>
-          </LinearGradient>
-        </Animated.View>
+          </View>
+        </LinearGradient>
+      </Animated.View>
+
+      <ScrollView
+        ref={scrollRef}
+        scrollEnabled={scrollEnabled}
+        showsVerticalScrollIndicator={false}
+        automaticallyAdjustContentInsets={false}
+        contentInsetAdjustmentBehavior="never"
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: 110 }}
+      >
         <Animated.View style={entranceStyle(wat1)}>
           <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
             {/* Quick add — today only */}
             {isToday && (
               <>
-                <Text style={s.sectionTitle}>Quick Add</Text>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 12,
+                  }}
+                >
+                  <Text style={[s.sectionTitle, { marginBottom: 0 }]}>Quick Add</Text>
+                  <View
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 5,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: status.color + '55',
+                      backgroundColor: status.color + '15',
+                    }}
+                  >
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: status.color }}>
+                      {status.label}
+                    </Text>
+                  </View>
+                </View>
                 <View style={s.quickRow}>
                   {QUICK_AMOUNTS.map((ml) => (
                     <TouchableOpacity key={ml} onPress={() => addWater(ml)} activeOpacity={0.75}>
@@ -659,7 +753,7 @@ const WaterIntakeScreen: React.FC = () => {
               </View>
               <View style={s.progressTrack}>
                 <LinearGradient
-                  colors={['#3B82F6', '#06B6D4']}
+                  colors={['#0891B2', '#06B6D4']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={[s.progressFill, { width: `${Math.min(fillPct * 100, 100)}%` }]}
@@ -667,7 +761,7 @@ const WaterIntakeScreen: React.FC = () => {
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
                 <Text style={{ fontSize: 11, color: COLORS.textMuted }}>0 ml</Text>
-                <Text style={{ fontSize: 11, color: '#3B82F6', fontWeight: '700' }}>
+                <Text style={{ fontSize: 11, color: COLORS.primary, fontWeight: '700' }}>
                   {Math.round(fillPct * 100)}%
                 </Text>
                 <Text style={{ fontSize: 11, color: COLORS.textMuted }}>
@@ -696,7 +790,7 @@ const WaterIntakeScreen: React.FC = () => {
                     >
                       {goal === g ? (
                         <LinearGradient
-                          colors={['#3B82F6', '#06B6D4']}
+                          colors={['#0891B2', '#06B6D4']}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 0 }}
                           style={{
@@ -779,12 +873,12 @@ const WaterIntakeScreen: React.FC = () => {
           <View style={{ paddingHorizontal: 20 }}>
             <GlassCard
               padding={16}
-              style={{ marginBottom: 16, borderColor: 'rgba(59,130,246,0.3)', borderWidth: 1 }}
+              style={{ marginBottom: 16, borderColor: 'rgba(8,145,178,0.3)', borderWidth: 1 }}
             >
               <Text
                 style={{
                   fontSize: 12,
-                  color: '#3B82F6',
+                  color: COLORS.primary,
                   fontWeight: '700',
                   marginBottom: 6,
                   letterSpacing: 0.5,
@@ -808,60 +902,33 @@ const s = StyleSheet.create({
     paddingTop: 56,
     paddingHorizontal: 24,
     paddingBottom: 28,
-    borderBottomLeftRadius: 36,
-    borderBottomRightRadius: 36,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    overflow: 'hidden',
+    height: 280,
   },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: COLORS.text, marginBottom: 12 },
-  headerSub: { fontSize: 13, color: COLORS.textMuted, marginBottom: 20 },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#fff' },
+  headerSub: { fontSize: 13, color: 'rgba(186,230,253,0.75)', marginBottom: 20 },
   datePicker: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 10,
     gap: 12,
   },
   dateArrow: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.bgCard,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dateLabelBtn: { alignItems: 'center', minWidth: 120 },
-  dateLabel: { fontSize: 16, fontWeight: '700', color: COLORS.text },
-  glassSection: { alignItems: 'center', marginBottom: 20 },
-  dragZone: {
-    width: GW + 20,
-    height: GH + 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  swipeHint: { fontSize: 12, color: COLORS.textMuted, marginTop: 8, letterSpacing: 0.3 },
-  statusBadge: {
-    marginTop: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  statusText: { fontSize: 13, fontWeight: '700' },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: COLORS.bgCard,
-    borderRadius: 20,
-    paddingVertical: 16,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  statItem: { flex: 1, alignItems: 'center' },
-  statValue: { fontSize: 18, fontWeight: '800' },
-  statLabel: { fontSize: 11, color: COLORS.textMuted, marginTop: 3 },
+  dateLabelBtn: { alignItems: 'center', minWidth: 90 },
+  dateLabel: { fontSize: 13, fontWeight: '700', color: '#fff' },
+
   sectionTitle: {
     fontSize: 17,
     fontWeight: '800',
@@ -880,7 +947,7 @@ const s = StyleSheet.create({
     borderColor: COLORS.border,
     backgroundColor: COLORS.bgCard,
   },
-  quickBtnTop: { fontSize: 15, fontWeight: '800', color: '#60A5FA' },
+  quickBtnTop: { fontSize: 15, fontWeight: '800', color: COLORS.primary },
   quickBtnSub: { fontSize: 10, color: COLORS.textMuted, marginTop: 2 },
   progressTrack: {
     height: 12,
@@ -897,7 +964,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  logDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#3B82F6' },
+  logDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.primary },
 });
 
 const gs = StyleSheet.create({
@@ -913,18 +980,18 @@ const gs = StyleSheet.create({
   pct: {
     fontSize: 32,
     fontWeight: '900',
-    color: COLORS.text,
+    color: '#fff',
     letterSpacing: -1,
-    textShadowColor: 'rgba(255,255,255,0.6)',
+    textShadowColor: 'rgba(0,0,0,0.3)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 6,
   },
   ml: {
     fontSize: 12,
-    color: COLORS.textSub,
+    color: 'rgba(186,230,253,0.9)',
     fontWeight: '600',
     marginTop: 4,
-    textShadowColor: 'rgba(255,255,255,0.5)',
+    textShadowColor: 'rgba(0,0,0,0.2)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },

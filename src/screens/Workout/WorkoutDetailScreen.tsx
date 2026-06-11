@@ -13,7 +13,9 @@ import {
   type AppStateStatus,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { LinearGradient } from 'expo-linear-gradient';
+import { calcWorkoutCalories, DEFAULT_WEIGHT_KG } from '../../utils/calorieCalc';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useWorkouts } from '../../hooks/useWorkouts';
@@ -121,6 +123,18 @@ const WorkoutDetailScreen: React.FC = () => {
   const { complete, remove, update } = useWorkouts();
   const [editVisible, setEditVisible] = useState(false);
   const [currentWorkout, setCurrentWorkout] = useState(workout);
+  const [weightKg, setWeightKg] = useState(DEFAULT_WEIGHT_KG);
+
+  useEffect(() => {
+    SecureStore.getItemAsync('calories_user_profile')
+      .then((raw) => {
+        if (raw) {
+          const p = JSON.parse(raw);
+          if (p?.weightKg) setWeightKg(p.weightKg);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const [exercises, setExercises] = useState<Exercise[]>(
     currentWorkout.exercises.map((e, i) => ({ ...e, id: e.id || String(i), completed: false }))
@@ -220,7 +234,11 @@ const WorkoutDetailScreen: React.FC = () => {
     [started]
   );
 
-  const estimatedCalories = Math.round((elapsedSecs / 60) * 7); // ~7 kcal/min average
+  const estimatedCalories = calcWorkoutCalories(
+    Math.max(1, Math.round(elapsedSecs / 60)),
+    currentWorkout.category,
+    weightKg
+  );
 
   const handleFinish = () => setConfirmFinish(true);
 
@@ -254,7 +272,7 @@ const WorkoutDetailScreen: React.FC = () => {
       >
         <StatusBar barStyle="dark-content" />
         <LinearGradient
-          colors={['#7C3AED', '#06B6D4']}
+          colors={['#0891B2', '#06B6D4']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{
@@ -264,7 +282,7 @@ const WorkoutDetailScreen: React.FC = () => {
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: 28,
-            shadowColor: '#7C3AED',
+            shadowColor: '#0891B2',
             shadowOffset: { width: 0, height: 12 },
             shadowOpacity: 0.6,
             shadowRadius: 24,
@@ -292,7 +310,7 @@ const WorkoutDetailScreen: React.FC = () => {
         </Text>
         <View style={{ flexDirection: 'row', gap: 12, width: '100%' }}>
           {[
-            { label: 'Exercises', value: `${completedCount}/${exercises.length}`, c: '#A78BFA' },
+            { label: 'Exercises', value: `${completedCount}/${exercises.length}`, c: '#38BDF8' },
             { label: 'Duration', value: `${Math.round(elapsedSecs / 60)}m`, c: '#06B6D4' },
             { label: 'Calories', value: `${estimatedCalories}`, c: '#F59E0B' },
           ].map((s) => (
@@ -307,7 +325,7 @@ const WorkoutDetailScreen: React.FC = () => {
           style={{ marginTop: 32, width: '100%' }}
         >
           <LinearGradient
-            colors={['#7C3AED', '#06B6D4']}
+            colors={['#0891B2', '#06B6D4']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={{ borderRadius: RADIUS.full }}
@@ -364,7 +382,7 @@ const WorkoutDetailScreen: React.FC = () => {
                 marginRight: 8,
               }}
             >
-              <IconEdit size={18} color="#A78BFA" strokeWidth={2} />
+              <IconEdit size={18} color="#38BDF8" strokeWidth={2} />
             </TouchableOpacity>
           )}
           <TouchableOpacity
@@ -415,7 +433,7 @@ const WorkoutDetailScreen: React.FC = () => {
           }}
         >
           <LinearGradient
-            colors={['#7C3AED', '#06B6D4']}
+            colors={['#0891B2', '#06B6D4']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={{ height: '100%', width: `${progress * 100}%` as any, borderRadius: 99 }}
@@ -475,7 +493,7 @@ const WorkoutDetailScreen: React.FC = () => {
           {completedCount > 0 && (
             <TouchableOpacity onPress={handleFinish} disabled={saving} style={{ flex: 1 }}>
               <LinearGradient
-                colors={['#7C3AED', '#06B6D4']}
+                colors={['#0891B2', '#06B6D4']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={{ borderRadius: RADIUS.full }}
@@ -568,7 +586,7 @@ const WorkoutDetailScreen: React.FC = () => {
                 }}
               >
                 <LinearGradient
-                  colors={['#7C3AED', '#06B6D4']}
+                  colors={['#0891B2', '#06B6D4']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={{
@@ -723,7 +741,7 @@ const WorkoutDetailScreen: React.FC = () => {
                   {ex.sets} sets × {ex.reps} reps
                 </Text>
                 {ex.weightKg ? (
-                  <Text style={{ fontSize: 12, color: '#A78BFA' }}>{ex.weightKg} kg</Text>
+                  <Text style={{ fontSize: 12, color: '#38BDF8' }}>{ex.weightKg} kg</Text>
                 ) : null}
                 {ex.restSecs ? (
                   <Text style={{ fontSize: 12, color: COLORS.textMuted }}>{ex.restSecs}s rest</Text>

@@ -9,6 +9,7 @@ import {
   Dimensions,
   ScrollView,
   Animated,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -95,9 +96,9 @@ export default function PaywallScreen() {
   const handlePurchase = () => setPaymentVisible(true);
 
   const handlePaymentSuccess = async (plan: 'monthly' | 'yearly') => {
-    setPaymentVisible(false);
     await setPremiumStatus(true);
-    nav.goBack();
+    setPaymentVisible(false);
+    nav.navigate('PremiumWelcome' as never, { plan } as never);
   };
 
   const activePrice = prices[selected];
@@ -105,7 +106,7 @@ export default function PaywallScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -114,9 +115,9 @@ export default function PaywallScreen() {
       >
         {/* ── Hero ── */}
         <LinearGradient
-          colors={['#3B0FA0', '#6D28D9', '#9333EA', '#C4B5FD', COLORS.bg]}
-          locations={[0, 0.3, 0.55, 0.8, 1]}
-          style={[st.hero, { paddingTop: insets.top + 6 }]}
+          colors={['#0C2340', '#0891B2', '#0C4A6E', COLORS.bg]}
+          locations={[0, 0.4, 0.75, 1]}
+          style={[st.hero, { paddingTop: insets.top + 16 }]}
         >
           {/* Close */}
           <TouchableOpacity onPress={() => nav.goBack()} style={st.closeBtn} activeOpacity={0.8}>
@@ -154,7 +155,7 @@ export default function PaywallScreen() {
                 <View style={[st.planCard, selected === 'yearly' && st.planCardActive]}>
                   {selected === 'yearly' && (
                     <LinearGradient
-                      colors={['#6D28D9', '#4F46E5']}
+                      colors={['#0369A1', '#0E7490']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={[StyleSheet.absoluteFill, { borderRadius: 20 }]}
@@ -190,7 +191,7 @@ export default function PaywallScreen() {
                 <View style={[st.planCard, selected === 'monthly' && st.planCardActive]}>
                   {selected === 'monthly' && (
                     <LinearGradient
-                      colors={['#6D28D9', '#4F46E5']}
+                      colors={['#0369A1', '#0E7490']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={[StyleSheet.absoluteFill, { borderRadius: 20 }]}
@@ -230,7 +231,7 @@ export default function PaywallScreen() {
               style={{ borderRadius: RADIUS.full, overflow: 'hidden' }}
             >
               <LinearGradient
-                colors={['#6D28D9', '#7C3AED']}
+                colors={['#0369A1', '#0891B2']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={st.ctaBtn}
@@ -245,7 +246,7 @@ export default function PaywallScreen() {
           <View style={st.featBox}>
             <View style={st.featBoxHeader}>
               <LinearGradient
-                colors={['#7C3AED', '#4F46E5']}
+                colors={['#0891B2', '#0E7490']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={st.accent}
@@ -301,7 +302,7 @@ export default function PaywallScreen() {
               style={{ borderRadius: RADIUS.full, overflow: 'hidden' }}
             >
               <LinearGradient
-                colors={['#6D28D9', '#7C3AED']}
+                colors={['#0369A1', '#0891B2']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={st.ctaBtn}
@@ -351,7 +352,7 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 18,
-    shadowColor: '#7C3AED',
+    shadowColor: '#0891B2',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.5,
     shadowRadius: 20,
@@ -392,7 +393,7 @@ const st = StyleSheet.create({
     position: 'relative',
     paddingHorizontal: 10,
   },
-  planCardActive: { borderColor: '#7C3AED' },
+  planCardActive: { borderColor: '#0891B2' },
 
   topBadge: {
     position: 'absolute',
@@ -439,7 +440,7 @@ const st = StyleSheet.create({
     justifyContent: 'center',
   },
   checkOn: { backgroundColor: '#fff', borderColor: '#fff' },
-  checkMark: { fontSize: 10, color: '#7C3AED', fontWeight: '900' },
+  checkMark: { fontSize: 10, color: '#0891B2', fontWeight: '900' },
 
   currencyNote: {
     fontSize: 11,
@@ -493,14 +494,14 @@ const st = StyleSheet.create({
   featTitle: { fontSize: 14, fontWeight: '800', color: COLORS.text, letterSpacing: -0.2 },
   featSub: { fontSize: 11, color: COLORS.textMuted, marginTop: 1, lineHeight: 16 },
   proBadge: {
-    backgroundColor: '#EDE9FE',
+    backgroundColor: '#E0F7FA',
     borderRadius: 7,
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderWidth: 1,
-    borderColor: '#DDD6FE',
+    borderColor: '#BAE6FD',
   },
-  proBadgeTxt: { fontSize: 9, fontWeight: '900', color: '#7C3AED', letterSpacing: 0.4 },
+  proBadgeTxt: { fontSize: 9, fontWeight: '900', color: '#0891B2', letterSpacing: 0.4 },
 
   freeGrid: { padding: 14, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   freeChip: {

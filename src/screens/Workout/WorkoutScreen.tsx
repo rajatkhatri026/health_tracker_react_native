@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useEntranceAnimation, entranceStyle } from '../../hooks/useEntranceAnimation';
+import { useScrollToTopOnTabPress } from '../../hooks/useScrollToTopOnTabPress';
 import Svg, { Circle } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -29,7 +30,7 @@ import { WorkoutSkeleton } from '../../components/Skeleton/Skeleton';
 const { width } = Dimensions.get('window');
 
 const WORKOUT_GRADS: [string, string][] = [
-  ['#7C3AED', '#A78BFA'],
+  ['#0891B2', '#38BDF8'],
   ['#3B82F6', '#06B6D4'],
   ['#10B981', '#34D399'],
   ['#F59E0B', '#EF4444'],
@@ -102,7 +103,7 @@ const WorkoutScreen: React.FC = () => {
     [toastAnim]
   );
 
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useScrollToTopOnTabPress();
   const refreshRef = useRef(refresh);
   useEffect(() => {
     refreshRef.current = refresh;
@@ -110,7 +111,6 @@ const WorkoutScreen: React.FC = () => {
 
   useFocusEffect(
     useCallback(() => {
-      scrollRef.current?.scrollTo({ y: 0, animated: false });
       refreshRef.current();
       if (pendingToast.message) {
         showToast(pendingToast.message);
@@ -129,7 +129,11 @@ const WorkoutScreen: React.FC = () => {
   };
 
   const [weekOffset, setWeekOffset] = useState(0);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
 
   // Build 7 dates for displayed week
   const weekDates = Array.from({ length: 7 }, (_, i) => {
@@ -157,12 +161,12 @@ const WorkoutScreen: React.FC = () => {
   const maxCount = Math.max(...weeklyCounts, 1);
 
   // Filter workouts by selected date if any
-  const filteredUpcoming = selectedDate
-    ? upcoming.filter((w) => new Date(w.scheduledAt).toDateString() === selectedDate.toDateString())
-    : upcoming;
-  const filteredHistory = selectedDate
-    ? history.filter((w) => new Date(w.scheduledAt).toDateString() === selectedDate.toDateString())
-    : history;
+  const filteredUpcoming = upcoming.filter(
+    (w) => new Date(w.scheduledAt).toDateString() === selectedDate.toDateString()
+  );
+  const filteredHistory = history.filter(
+    (w) => new Date(w.scheduledAt).toDateString() === selectedDate.toDateString()
+  );
 
   if (loading) {
     return <WorkoutSkeleton />;
@@ -170,7 +174,7 @@ const WorkoutScreen: React.FC = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
       {/* Toast */}
       {toast !== '' && (
@@ -197,7 +201,7 @@ const WorkoutScreen: React.FC = () => {
       {/* Header */}
       <Animated.View style={entranceStyle(ws0)}>
         <LinearGradient
-          colors={['#F4F5FA', '#EEF0FF']}
+          colors={['#0C2340', '#0891B2']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{
@@ -206,14 +210,33 @@ const WorkoutScreen: React.FC = () => {
             paddingBottom: 28,
             borderBottomLeftRadius: 32,
             borderBottomRightRadius: 32,
-            borderBottomWidth: 1,
-            borderColor: COLORS.border,
+            overflow: 'hidden',
+            height: 280,
           }}
         >
-          <Svg width={width} height={200} style={{ position: 'absolute', top: 0, left: 0 }}>
-            <Circle cx={width * 0.8} cy={30} r={100} fill="#7C3AED" fillOpacity="0.08" />
-            <Circle cx={20} cy={160} r={70} fill="#06B6D4" fillOpacity="0.06" />
-          </Svg>
+          {/* Decorative circles */}
+          <View
+            style={{
+              position: 'absolute',
+              width: 180,
+              height: 180,
+              borderRadius: 90,
+              top: -50,
+              right: -40,
+              backgroundColor: 'rgba(255,255,255,0.06)',
+            }}
+          />
+          <View
+            style={{
+              position: 'absolute',
+              width: 100,
+              height: 100,
+              borderRadius: 50,
+              bottom: -20,
+              left: -20,
+              backgroundColor: 'rgba(255,255,255,0.04)',
+            }}
+          />
 
           <View
             style={{
@@ -226,11 +249,13 @@ const WorkoutScreen: React.FC = () => {
             {selecting ? (
               <>
                 <TouchableOpacity onPress={exitSelect}>
-                  <Text style={{ color: COLORS.textSub, fontSize: 14, fontWeight: '600' }}>
+                  <Text
+                    style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, fontWeight: '600' }}
+                  >
                     Cancel
                   </Text>
                 </TouchableOpacity>
-                <Text style={{ color: COLORS.text, fontSize: 15, fontWeight: '700' }}>
+                <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
                   {selectedIds.length} selected
                 </Text>
                 <TouchableOpacity
@@ -258,7 +283,7 @@ const WorkoutScreen: React.FC = () => {
               </>
             ) : (
               <>
-                <Text style={{ fontSize: 18, fontWeight: '800', color: COLORS.text }}>
+                <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff' }}>
                   Workout Tracker
                 </Text>
                 <TouchableOpacity
@@ -267,14 +292,14 @@ const WorkoutScreen: React.FC = () => {
                     width: 40,
                     height: 40,
                     borderRadius: 12,
-                    backgroundColor: 'rgba(124,58,237,0.25)',
+                    backgroundColor: 'rgba(255,255,255,0.15)',
                     borderWidth: 1,
-                    borderColor: 'rgba(124,58,237,0.4)',
+                    borderColor: 'rgba(255,255,255,0.3)',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <IconPlus size={18} color="#A78BFA" strokeWidth={2.5} />
+                  <IconPlus size={18} color="#fff" strokeWidth={2.5} />
                 </TouchableOpacity>
               </>
             )}
@@ -292,39 +317,49 @@ const WorkoutScreen: React.FC = () => {
             <TouchableOpacity
               onPress={() => {
                 setWeekOffset((w) => w - 1);
-                setSelectedDate(null);
+                setSelectedDate(
+                  (() => {
+                    const d = new Date();
+                    d.setHours(0, 0, 0, 0);
+                    return d;
+                  })()
+                );
               }}
               style={{
                 width: 32,
                 height: 32,
                 borderRadius: 10,
-                backgroundColor: 'rgba(124,58,237,0.2)',
+                backgroundColor: 'rgba(255,255,255,0.15)',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <IconArrowLeft size={15} color="#A78BFA" />
+              <IconArrowLeft size={15} color="#fff" />
             </TouchableOpacity>
-            <Text
-              style={{ color: COLORS.text, fontSize: 12, fontWeight: '700', letterSpacing: 0.3 }}
-            >
+            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700', letterSpacing: 0.3 }}>
               {weekLabel}
             </Text>
             <TouchableOpacity
               onPress={() => {
                 setWeekOffset((w) => w + 1);
-                setSelectedDate(null);
+                setSelectedDate(
+                  (() => {
+                    const d = new Date();
+                    d.setHours(0, 0, 0, 0);
+                    return d;
+                  })()
+                );
               }}
               style={{
                 width: 32,
                 height: 32,
                 borderRadius: 10,
-                backgroundColor: 'rgba(124,58,237,0.2)',
+                backgroundColor: 'rgba(255,255,255,0.15)',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <IconChevronRight size={15} color="#A78BFA" />
+              <IconChevronRight size={15} color="#fff" />
             </TouchableOpacity>
           </View>
 
@@ -333,12 +368,14 @@ const WorkoutScreen: React.FC = () => {
             {weekDates.map((day, i) => {
               const v = weeklyCounts[i];
               const isToday = day.toDateString() === new Date().toDateString();
-              const isSelected = selectedDate?.toDateString() === day.toDateString();
+              const isSelected = selectedDate.toDateString() === day.toDateString();
               const barH = Math.max((v / maxCount) * 44, v > 0 ? 6 : 2);
               return (
                 <TouchableOpacity
                   key={i}
-                  onPress={() => setSelectedDate(isSelected ? null : day)}
+                  onPress={() => {
+                    if (!isSelected) setSelectedDate(day);
+                  }}
                   style={{ flex: 1, alignItems: 'center' }}
                   activeOpacity={0.7}
                 >
@@ -346,8 +383,8 @@ const WorkoutScreen: React.FC = () => {
                   <Text
                     style={{
                       fontSize: 10,
-                      color: isSelected ? COLORS.primary : isToday ? '#A78BFA' : COLORS.textMuted,
-                      fontWeight: isSelected || isToday ? '700' : '400',
+                      color: isSelected ? '#fff' : 'rgba(255,255,255,0.6)',
+                      fontWeight: isSelected ? '700' : '400',
                       marginBottom: 3,
                     }}
                   >
@@ -356,7 +393,7 @@ const WorkoutScreen: React.FC = () => {
                   {/* Date pill */}
                   {isSelected ? (
                     <LinearGradient
-                      colors={['#7C3AED', '#A78BFA']}
+                      colors={['#fff', '#fff']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={{
@@ -368,7 +405,7 @@ const WorkoutScreen: React.FC = () => {
                         marginBottom: 6,
                       }}
                     >
-                      <Text style={{ fontSize: 11, color: '#fff', fontWeight: '700' }}>
+                      <Text style={{ fontSize: 11, color: '#0891B2', fontWeight: '700' }}>
                         {day.getDate()}
                       </Text>
                     </LinearGradient>
@@ -381,16 +418,16 @@ const WorkoutScreen: React.FC = () => {
                         alignItems: 'center',
                         justifyContent: 'center',
                         marginBottom: 6,
-                        backgroundColor: isToday ? 'rgba(124,58,237,0.1)' : 'transparent',
-                        borderWidth: isToday ? 1 : 0,
-                        borderColor: '#7C3AED',
+                        backgroundColor: 'transparent',
+                        borderWidth: 0,
+                        borderColor: 'transparent',
                       }}
                     >
                       <Text
                         style={{
                           fontSize: 11,
-                          color: isToday ? '#A78BFA' : COLORS.textSub,
-                          fontWeight: isToday ? '700' : '400',
+                          color: 'rgba(255,255,255,0.7)',
+                          fontWeight: '400',
                         }}
                       >
                         {day.getDate()}
@@ -402,9 +439,9 @@ const WorkoutScreen: React.FC = () => {
                     <LinearGradient
                       colors={
                         isSelected
-                          ? ['#7C3AED', '#06B6D4']
+                          ? ['#0891B2', '#06B6D4']
                           : v > 0
-                            ? ['#4C1D95', '#6D28D9']
+                            ? ['#0E7490', '#0891B2']
                             : [COLORS.border, COLORS.borderLight]
                       }
                       start={{ x: 0, y: 1 }}
@@ -417,7 +454,7 @@ const WorkoutScreen: React.FC = () => {
                     <Text
                       style={{
                         fontSize: 8,
-                        color: isSelected ? '#7C3AED' : '#A78BFA',
+                        color: isSelected ? '#0891B2' : 'rgba(255,255,255,0.7)',
                         fontWeight: '700',
                         marginTop: 2,
                       }}
@@ -429,17 +466,6 @@ const WorkoutScreen: React.FC = () => {
               );
             })}
           </View>
-          {selectedDate && (
-            <TouchableOpacity
-              onPress={() => setSelectedDate(null)}
-              style={{ marginTop: 8, alignSelf: 'center' }}
-            >
-              <Text style={{ color: '#A78BFA', fontSize: 11, fontWeight: '600' }}>
-                Showing {selectedDate.toLocaleDateString([], { month: 'short', day: 'numeric' })} ·
-                Tap to clear
-              </Text>
-            </TouchableOpacity>
-          )}
         </LinearGradient>
       </Animated.View>
 
@@ -459,7 +485,7 @@ const WorkoutScreen: React.FC = () => {
                 label: 'This Week',
                 value: statsLoading ? '…' : String(stats?.this_week ?? 0),
                 unit: 'workouts',
-                c: '#A78BFA',
+                c: COLORS.primary,
               },
               {
                 label: 'Total Mins',
@@ -499,7 +525,7 @@ const WorkoutScreen: React.FC = () => {
               <TouchableOpacity key={t} onPress={() => setTab(t)} style={{ flex: 1 }}>
                 {tab === t ? (
                   <LinearGradient
-                    colors={['#7C3AED', '#06B6D4']}
+                    colors={['#0891B2', '#06B6D4']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={{ borderRadius: RADIUS.full, paddingVertical: 10, alignItems: 'center' }}
@@ -559,7 +585,7 @@ const WorkoutScreen: React.FC = () => {
                   setSelectedIds(selectedIds.length === all.length ? [] : all);
                 }}
               >
-                <Text style={{ color: '#A78BFA', fontSize: 13, fontWeight: '600' }}>
+                <Text style={{ color: COLORS.primary, fontSize: 13, fontWeight: '600' }}>
                   {selectedIds.length ===
                   (tab === 'upcoming' ? filteredUpcoming : filteredHistory).length
                     ? 'Deselect All'
@@ -577,32 +603,28 @@ const WorkoutScreen: React.FC = () => {
                 <GlassCard padding={30} style={{ alignItems: 'center', gap: 12 }}>
                   <Text style={{ fontSize: 36 }}>🏋️</Text>
                   <Text style={{ fontSize: 15, fontWeight: '600', color: COLORS.text }}>
-                    {selectedDate ? 'No workouts on this day' : 'No upcoming workouts'}
+                    No workouts on this day
                   </Text>
                   <Text style={{ fontSize: 13, color: COLORS.textMuted, textAlign: 'center' }}>
-                    {selectedDate
-                      ? 'Select another date or schedule a new workout'
-                      : 'Tap the + button to schedule your next session'}
+                    Select another date or tap + to schedule a new workout
                   </Text>
-                  {!selectedDate && (
-                    <TouchableOpacity onPress={() => setModalVisible(true)}>
-                      <LinearGradient
-                        colors={['#7C3AED', '#06B6D4']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={{
-                          borderRadius: RADIUS.full,
-                          paddingHorizontal: 24,
-                          paddingVertical: 10,
-                          marginTop: 4,
-                        }}
-                      >
-                        <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>
-                          Schedule Workout
-                        </Text>
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  )}
+                  <TouchableOpacity onPress={() => setModalVisible(true)}>
+                    <LinearGradient
+                      colors={['#0891B2', '#06B6D4']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={{
+                        borderRadius: RADIUS.full,
+                        paddingHorizontal: 24,
+                        paddingVertical: 10,
+                        marginTop: 4,
+                      }}
+                    >
+                      <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>
+                        Schedule Workout
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
                 </GlassCard>
               ) : (
                 filteredUpcoming.map((w, i) => {
@@ -629,7 +651,7 @@ const WorkoutScreen: React.FC = () => {
                           alignItems: 'center',
                           marginBottom: 12,
                           borderWidth: isSelected ? 1.5 : 0,
-                          borderColor: '#7C3AED',
+                          borderColor: '#0891B2',
                         }}
                         padding={14}
                       >
@@ -642,9 +664,9 @@ const WorkoutScreen: React.FC = () => {
                               marginRight: 14,
                               alignItems: 'center',
                               justifyContent: 'center',
-                              backgroundColor: isSelected ? '#7C3AED' : 'transparent',
+                              backgroundColor: isSelected ? '#0891B2' : 'transparent',
                               borderWidth: 1.5,
-                              borderColor: isSelected ? '#7C3AED' : COLORS.border,
+                              borderColor: isSelected ? '#0891B2' : COLORS.border,
                             }}
                           >
                             {isSelected && <IconCheck size={14} color="#fff" strokeWidth={2.5} />}
@@ -688,15 +710,17 @@ const WorkoutScreen: React.FC = () => {
                           (isFuture ? (
                             <View
                               style={{
-                                backgroundColor: 'rgba(124,58,237,0.15)',
+                                backgroundColor: 'rgba(8,145,178,0.1)',
                                 borderRadius: 8,
                                 paddingHorizontal: 8,
                                 paddingVertical: 4,
                                 borderWidth: 1,
-                                borderColor: 'rgba(124,58,237,0.3)',
+                                borderColor: 'rgba(8,145,178,0.25)',
                               }}
                             >
-                              <Text style={{ fontSize: 10, color: '#A78BFA', fontWeight: '600' }}>
+                              <Text
+                                style={{ fontSize: 10, color: COLORS.primary, fontWeight: '600' }}
+                              >
                                 Scheduled
                               </Text>
                             </View>
@@ -785,12 +809,10 @@ const WorkoutScreen: React.FC = () => {
                 <GlassCard padding={30} style={{ alignItems: 'center', gap: 10 }}>
                   <Text style={{ fontSize: 36 }}>📋</Text>
                   <Text style={{ fontSize: 15, fontWeight: '600', color: COLORS.text }}>
-                    {selectedDate ? 'No completed workouts on this day' : 'No history yet'}
+                    No completed workouts on this day
                   </Text>
                   <Text style={{ fontSize: 13, color: COLORS.textMuted, textAlign: 'center' }}>
-                    {selectedDate
-                      ? 'Try selecting another date'
-                      : 'Complete your first workout to see it here'}
+                    Try selecting another date
                   </Text>
                 </GlassCard>
               ) : (
@@ -814,7 +836,7 @@ const WorkoutScreen: React.FC = () => {
                           alignItems: 'center',
                           marginBottom: 12,
                           borderWidth: isSelected ? 1.5 : 0,
-                          borderColor: '#7C3AED',
+                          borderColor: '#0891B2',
                         }}
                         padding={14}
                       >
@@ -827,9 +849,9 @@ const WorkoutScreen: React.FC = () => {
                               marginRight: 14,
                               alignItems: 'center',
                               justifyContent: 'center',
-                              backgroundColor: isSelected ? '#7C3AED' : 'transparent',
+                              backgroundColor: isSelected ? '#0891B2' : 'transparent',
                               borderWidth: 1.5,
-                              borderColor: isSelected ? '#7C3AED' : COLORS.border,
+                              borderColor: isSelected ? '#0891B2' : COLORS.border,
                             }}
                           >
                             {isSelected && <IconCheck size={14} color="#fff" strokeWidth={2.5} />}

@@ -157,18 +157,25 @@ export const getWeeklySteps = async (): Promise<DailySteps[]> => {
   const ok = await initStepTracker();
   if (!ok) return [];
 
-  const days: DailySteps[] = [];
-  for (let i = 6; i >= 0; i--) {
+  // Build date range array
+  const dateRange = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
-    d.setDate(d.getDate() - i);
-    const start = startOfDay(d);
-    const end = endOfDay(d);
-    let steps = 0;
-    if (Platform.OS === 'ios') steps = await getStepsPedometer(start, end);
-    else if (Platform.OS === 'android') steps = await getStepsAndroid(start, end);
-    days.push({ date: localDateStr(d), steps });
-  }
-  return days;
+    d.setDate(d.getDate() - (6 - i));
+    return d;
+  });
+
+  // Fetch all 7 days in parallel instead of sequentially
+  const stepCounts = await Promise.all(
+    dateRange.map((d) => {
+      const start = startOfDay(d);
+      const end = endOfDay(d);
+      if (Platform.OS === 'ios') return getStepsPedometer(start, end);
+      if (Platform.OS === 'android') return getStepsAndroid(start, end);
+      return Promise.resolve(0);
+    })
+  );
+
+  return dateRange.map((d, i) => ({ date: localDateStr(d), steps: stepCounts[i] }));
 };
 
 export const isStepTrackingSupported = (): boolean => Platform.OS !== 'web';

@@ -8,6 +8,15 @@ export const phoneAuth = async (
   return data;
 };
 
+export const socialAuth = async (
+  idToken: string,
+  provider: 'google' | 'apple',
+  name?: string
+): Promise<AuthTokens & { is_new_user: boolean }> => {
+  const { data } = await api.post('/auth/social', { id_token: idToken, provider, name });
+  return data;
+};
+
 export const otpSend = async (
   phone: string
 ): Promise<{ message: string; expires_in: number; dev_otp?: string }> => {

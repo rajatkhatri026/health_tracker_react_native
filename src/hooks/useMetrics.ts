@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { getMetrics, createMetric } from '../api/metrics';
 import type { Metric, MetricType, CreateMetricPayload } from '../types';
@@ -26,20 +27,35 @@ export const useMetrics = (options: UseMetricsOptions = {}): UseMetricsResult =>
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const cacheKey = user ? `metrics_cache_${user.user_id}_${type ?? 'all'}_${days}` : null;
+
   const fetch = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
     setError(null);
+
+    // Show cached data instantly
+    if (cacheKey) {
+      try {
+        const cached = await AsyncStorage.getItem(cacheKey);
+        if (cached) {
+          setMetrics(JSON.parse(cached));
+          setLoading(false);
+        }
+      } catch {}
+    }
+
+    // Fetch fresh from API in background
     try {
       const from = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
       const data = await getMetrics(user.user_id, { type, from });
       setMetrics(data);
+      if (cacheKey) AsyncStorage.setItem(cacheKey, JSON.stringify(data)).catch(() => {});
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load metrics');
     } finally {
       setLoading(false);
     }
-  }, [user, type, days]);
+  }, [user, type, days, cacheKey]);
 
   useEffect(() => {
     fetch();

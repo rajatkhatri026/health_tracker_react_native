@@ -127,7 +127,7 @@ const CustomDateTimePicker: React.FC<Props> = ({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <View style={s.overlay}>
         <LinearGradient
-          colors={['#7C3AED', '#4F46E5', '#0891B2']}
+          colors={['#0891B2', '#0E7490', '#0891B2']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={s.gradientBorder}
@@ -167,7 +167,7 @@ const CustomDateTimePicker: React.FC<Props> = ({
                 {step === 'day' && (
                   <View style={s.monthNav}>
                     <TouchableOpacity onPress={prevMonth} style={s.navBtn}>
-                      <IconArrowLeft size={18} color="#7C3AED" />
+                      <IconArrowLeft size={18} color="#0891B2" />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => yearMonthFlow && setStep('year')}
@@ -177,10 +177,10 @@ const CustomDateTimePicker: React.FC<Props> = ({
                       <Text style={s.monthText}>
                         {MONTHS[viewMonth]} {viewYear}
                       </Text>
-                      {yearMonthFlow && <Text style={{ color: '#7C3AED', fontSize: 12 }}>▾</Text>}
+                      {yearMonthFlow && <Text style={{ color: '#0891B2', fontSize: 12 }}>▾</Text>}
                     </TouchableOpacity>
                     <TouchableOpacity onPress={nextMonth} style={s.navBtn}>
-                      <IconChevronRight size={18} color="#7C3AED" />
+                      <IconChevronRight size={18} color="#0891B2" />
                     </TouchableOpacity>
                   </View>
                 )}
@@ -224,7 +224,7 @@ const CustomDateTimePicker: React.FC<Props> = ({
                               >
                                 {sel ? (
                                   <LinearGradient
-                                    colors={['#7C3AED', '#0891B2']}
+                                    colors={['#0891B2', '#0891B2']}
                                     style={s.gridCellActive}
                                   >
                                     <Text style={s.gridCellActiveText}>{y}</Text>
@@ -258,7 +258,7 @@ const CustomDateTimePicker: React.FC<Props> = ({
                         >
                           {sel ? (
                             <LinearGradient
-                              colors={['#7C3AED', '#0891B2']}
+                              colors={['#0891B2', '#0891B2']}
                               style={[s.gridCellActive, { width: '100%', paddingVertical: 14 }]}
                             >
                               <Text style={s.gridCellActiveText}>{m}</Text>
@@ -314,7 +314,7 @@ const CustomDateTimePicker: React.FC<Props> = ({
                                 >
                                   {sel ? (
                                     <LinearGradient
-                                      colors={['#7C3AED', '#0891B2']}
+                                      colors={['#0891B2', '#0891B2']}
                                       style={s.daySelected}
                                     >
                                       <Text style={s.daySelectedText}>{day}</Text>
@@ -357,7 +357,7 @@ const CustomDateTimePicker: React.FC<Props> = ({
                   {Array.from({ length: 24 }, (_, i) => (
                     <TouchableOpacity key={i} onPress={() => setHour(i)}>
                       {hour === i ? (
-                        <LinearGradient colors={['#7C3AED', '#0891B2']} style={s.timeChipActive}>
+                        <LinearGradient colors={['#0891B2', '#0891B2']} style={s.timeChipActive}>
                           <Text style={s.timeChipActiveText}>{pad(i)}</Text>
                         </LinearGradient>
                       ) : (
@@ -378,7 +378,7 @@ const CustomDateTimePicker: React.FC<Props> = ({
                       <TouchableOpacity key={m} onPress={() => setMinute(m)}>
                         {active ? (
                           <LinearGradient
-                            colors={['#7C3AED', '#0891B2']}
+                            colors={['#0891B2', '#0891B2']}
                             style={[s.timeChipActive, { width: 48 }]}
                           >
                             <Text style={s.timeChipActiveText}>{pad(m)}</Text>
@@ -402,7 +402,7 @@ const CustomDateTimePicker: React.FC<Props> = ({
               </TouchableOpacity>
               <TouchableOpacity onPress={handleConfirm} style={{ flex: 1 }}>
                 <LinearGradient
-                  colors={['#7C3AED', '#0891B2']}
+                  colors={['#0891B2', '#0891B2']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={s.confirmBtn}
@@ -430,7 +430,7 @@ const s = StyleSheet.create({
     borderRadius: 30,
     padding: 2,
     width: '100%',
-    shadowColor: '#7C3AED',
+    shadowColor: '#0891B2',
     shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.3,
     shadowRadius: 40,
@@ -500,7 +500,7 @@ const s = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: '#EDE9FE',
+    backgroundColor: '#E0F7FA',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -530,7 +530,7 @@ const s = StyleSheet.create({
     color: '#9CA3AF',
   },
   crumbActive: {
-    color: '#7C3AED',
+    color: '#0891B2',
     fontWeight: '800',
   },
   crumbSep: {
@@ -613,12 +613,12 @@ const s = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EDE9FE',
+    backgroundColor: '#E0F7FA',
     borderWidth: 1.5,
-    borderColor: '#7C3AED',
+    borderColor: '#0891B2',
   },
   dayTodayText: {
-    color: '#7C3AED',
+    color: '#0891B2',
     fontSize: 14,
     fontWeight: '700',
   },
@@ -647,7 +647,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 28,
     paddingVertical: 16,
     borderWidth: 1,
-    borderColor: '#EDE9FE',
+    borderColor: '#E0F7FA',
   },
   timeHour: {
     fontSize: 48,
@@ -658,7 +658,7 @@ const s = StyleSheet.create({
   timeColon: {
     fontSize: 48,
     fontWeight: '900',
-    color: '#7C3AED',
+    color: '#0891B2',
     marginHorizontal: 4,
     letterSpacing: -2,
   },

@@ -84,28 +84,47 @@ export const useSteps = (): UseStepsResult => {
     if (!userId) return;
     const records = await getSteps(userId, 7);
     setWeeklySteps(records);
-    // Always set today's steps from the backend record for today's date.
-    // If no record exists yet (genuinely 0 steps day), set to 0 explicitly —
-    // never leave a stale previous-day value in state.
     const todayRecord = records.find((r) => r.date === localDateStr());
-    setTodaySteps(todayRecord?.steps ?? 0);
+    const ts = todayRecord?.steps ?? 0;
+    setTodaySteps(ts);
+    // Write fresh data to cache
+    const key = `steps_cache_${userId}`;
+    AsyncStorage.setItem(key, JSON.stringify({ weeklySteps: records, todaySteps: ts })).catch(
+      () => {}
+    );
   }, [userId]);
+
+  const stepsCacheKey = userId ? `steps_cache_${userId}` : null;
 
   const refresh = useCallback(async () => {
     if (!userId) return;
-    setLoading(true);
     setError(null);
+
+    // Show cached steps instantly
+    if (stepsCacheKey) {
+      try {
+        const cached = await AsyncStorage.getItem(stepsCacheKey);
+        if (cached) {
+          const { weeklySteps: ws, todaySteps: ts } = JSON.parse(cached);
+          setWeeklySteps(ws ?? []);
+          setTodaySteps(ts ?? 0);
+          setLoading(false);
+        }
+      } catch {}
+    }
+
+    // Sync device + backend in background
     try {
       const stored = await AsyncStorage.getItem(STEP_GOAL_KEY).catch(() => null);
       if (stored) setGoalSteps(parseInt(stored, 10));
       await syncFromDevice();
-      await fetchFromBackend();
+      await fetchFromBackend(); // writes cache internally
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load steps');
     } finally {
       setLoading(false);
     }
-  }, [userId, syncFromDevice, fetchFromBackend]);
+  }, [userId, syncFromDevice, fetchFromBackend, stepsCacheKey]);
 
   // Initial load — intentionally omitting `refresh` from deps to avoid loop;
   // refresh is memoized on userId so re-running when userId changes is sufficient.

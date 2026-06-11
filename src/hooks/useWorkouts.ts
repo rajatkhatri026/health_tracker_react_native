@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import {
   getWorkouts,
@@ -39,19 +40,35 @@ export const useWorkouts = (): UseWorkoutsResult => {
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
 
+  const workoutCacheKey = user ? `workouts_cache_${user.user_id}` : null;
+
   const fetch = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
+
+    // Show cached data instantly
+    if (workoutCacheKey) {
+      try {
+        const cached = await AsyncStorage.getItem(workoutCacheKey);
+        if (cached) {
+          setWorkouts(JSON.parse(cached));
+          setLoading(false);
+        }
+      } catch {}
+    }
+
+    // Fetch fresh from API in background
     try {
       const data = await getWorkouts(user.user_id);
       setWorkouts(data);
-      syncWorkoutReminders(data).catch(() => {}); // non-critical
+      if (workoutCacheKey)
+        AsyncStorage.setItem(workoutCacheKey, JSON.stringify(data)).catch(() => {});
+      syncWorkoutReminders(data).catch(() => {});
     } catch {
       setWorkouts([]);
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, workoutCacheKey]);
 
   const fetchStats = useCallback(async () => {
     if (!user) return;

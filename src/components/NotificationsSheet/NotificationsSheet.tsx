@@ -26,7 +26,7 @@ const SHEET_H = SCREEN_H * 0.82;
 const TYPE_CONFIG: Record<NotificationType, { icon: string; color: string; bg: string }> = {
   reminder: { icon: '⏰', color: '#F59E0B', bg: '#FEF3C7' },
   summary: { icon: '📊', color: '#06B6D4', bg: '#ECFEFF' },
-  goal: { icon: '🎯', color: '#7C3AED', bg: '#EDE9FE' },
+  goal: { icon: '🎯', color: '#0891B2', bg: '#E0F7FA' },
   streak: { icon: '🔥', color: '#EF4444', bg: '#FEE2E2' },
   system: { icon: '⚙️', color: '#6B7280', bg: '#F3F4F8' },
 };
@@ -69,7 +69,7 @@ const NotifRow: React.FC<{
 
       {/* Content */}
       <View style={{ flex: 1, gap: 3 }}>
-        <Text style={[s.rowTitle, !notif.read && { color: '#6D28D9', fontWeight: '700' }]}>
+        <Text style={[s.rowTitle, !notif.read && { color: '#0369A1', fontWeight: '700' }]}>
           {notif.title}
         </Text>
         <Text style={s.rowBody} numberOfLines={2}>
@@ -214,7 +214,7 @@ const NotificationsSheet: React.FC<Props> = ({
         }}
       >
         <LinearGradient
-          colors={['#7C3AED', '#4F46E5', '#06B6D4']}
+          colors={['#0891B2', '#0E7490', '#06B6D4']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={{ borderTopLeftRadius: 33, borderTopRightRadius: 33, padding: 1.5, flex: 1 }}
@@ -229,7 +229,7 @@ const NotificationsSheet: React.FC<Props> = ({
             <View style={s.header}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <View style={s.headerIconWrap}>
-                  <IconBell size={18} color="#A78BFA" strokeWidth={2} />
+                  <IconBell size={18} color="#38BDF8" strokeWidth={2} />
                   {unreadCount > 0 && (
                     <View style={s.headerBadge}>
                       <Text style={s.headerBadgeText}>
@@ -270,7 +270,7 @@ const NotificationsSheet: React.FC<Props> = ({
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 {unreadCount > 0 && (
                   <TouchableOpacity onPress={onMarkAllRead} style={s.actionBtn}>
-                    <IconCheck size={13} color="#A78BFA" strokeWidth={2.5} />
+                    <IconCheck size={13} color="#38BDF8" strokeWidth={2.5} />
                     <Text style={s.actionBtnText}>Read all</Text>
                   </TouchableOpacity>
                 )}
@@ -285,7 +285,7 @@ const NotificationsSheet: React.FC<Props> = ({
 
             {/* Gradient divider */}
             <LinearGradient
-              colors={['#7C3AED', '#06B6D4']}
+              colors={['#0891B2', '#06B6D4']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={{ height: 1, marginHorizontal: 20, marginBottom: 8 }}
@@ -385,9 +385,9 @@ const s = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 13,
-    backgroundColor: '#EDE9FE',
+    backgroundColor: '#E0F7FA',
     borderWidth: 1,
-    borderColor: '#DDD6FE',
+    borderColor: '#BAE6FD',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -435,11 +435,11 @@ const s = StyleSheet.create({
     borderColor: '#E4E7F0',
   },
   pillActive: {
-    backgroundColor: '#EDE9FE',
-    borderColor: '#DDD6FE',
+    backgroundColor: '#E0F7FA',
+    borderColor: '#BAE6FD',
   },
   pillText: { fontSize: 12, color: COLORS.textMuted, fontWeight: '600' },
-  pillTextActive: { color: '#7C3AED' },
+  pillTextActive: { color: '#0891B2' },
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -451,7 +451,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E4E7F0',
   },
-  actionBtnText: { fontSize: 11, color: '#7C3AED', fontWeight: '600' },
+  actionBtnText: { fontSize: 11, color: '#0891B2', fontWeight: '600' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 60 },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: '#0F0F1A', marginBottom: 8 },
   emptyText: {
@@ -484,7 +484,7 @@ const s = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 3.5,
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#0891B2',
   },
   iconWrap: {
     width: 44,

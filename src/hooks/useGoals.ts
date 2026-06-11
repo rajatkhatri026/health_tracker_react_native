@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { getGoals, createGoal, updateGoal } from '../api/goals';
 import type { Goal, CreateGoalPayload, MetricType } from '../types';
@@ -21,19 +22,32 @@ export const useGoals = (): UseGoalsResult => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const cacheKey = user ? `goals_cache_${user.user_id}` : null;
+
   const fetch = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
     setError(null);
+    // Show cached instantly
+    if (cacheKey) {
+      try {
+        const cached = await AsyncStorage.getItem(cacheKey);
+        if (cached) {
+          setGoals(JSON.parse(cached));
+          setLoading(false);
+        }
+      } catch {}
+    }
+    // Refresh from API in background
     try {
       const data = await getGoals(user.user_id);
       setGoals(data);
+      if (cacheKey) AsyncStorage.setItem(cacheKey, JSON.stringify(data)).catch(() => {});
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load goals');
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, cacheKey]);
 
   useEffect(() => {
     fetch();

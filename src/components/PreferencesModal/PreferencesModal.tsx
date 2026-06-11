@@ -43,7 +43,7 @@ function ChipRow<T extends string | number>({
             onPress={() => onSelect(o.value)}
           >
             <LinearGradient
-              colors={['#7C3AED', '#0891B2']}
+              colors={['#0891B2', '#0891B2']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={s.chipActive}
@@ -106,7 +106,7 @@ const PreferencesModal: React.FC<Props> = ({ visible, prefs, onClose, onSave }) 
             <View style={[s.headerSide, { alignItems: 'flex-end' }]}>
               <TouchableOpacity onPress={handleSave} activeOpacity={0.85}>
                 <LinearGradient
-                  colors={['#7C3AED', '#0891B2']}
+                  colors={['#0891B2', '#0891B2']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={s.saveBtn}
@@ -239,7 +239,7 @@ const s = StyleSheet.create({
     borderColor: COLORS.border,
     padding: 18,
     marginBottom: 0,
-    shadowColor: '#7C3AED',
+    shadowColor: '#0891B2',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,

@@ -19,6 +19,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useEntranceAnimation, entranceStyle } from '../../hooks/useEntranceAnimation';
+import { useScrollToTopOnTabPress } from '../../hooks/useScrollToTopOnTabPress';
 
 import Svg, { Defs, LinearGradient as SvgGrad, Stop, Circle } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -32,6 +33,7 @@ import {
   getAvatar,
   uploadAvatar,
   deleteAvatar,
+  deleteAccount,
 } from '../../api/profile';
 import type { UserProfile } from '../../types';
 import CustomDateTimePicker from '../../components/DateTimePicker/CustomDateTimePicker';
@@ -39,6 +41,9 @@ import LegalModal from '../../components/LegalModal/LegalModal';
 import PreferencesModal from '../../components/PreferencesModal/PreferencesModal';
 import { useAppPreferences } from '../../hooks/useAppPreferences';
 import * as Notifications from 'expo-notifications';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as SecureStore from 'expo-secure-store';
 import {
   PRIVACY_POLICY_SECTIONS,
   PRIVACY_POLICY_DATE,
@@ -62,6 +67,9 @@ import {
   IconGlobe,
   IconInfo,
   IconRuler,
+  IconTrash,
+  IconStar,
+  IconMail,
 } from '../../components/icons/Icons';
 import { ProfileSkeleton } from '../../components/Skeleton/Skeleton';
 
@@ -166,7 +174,7 @@ const EditModal: React.FC<{
             <TouchableOpacity key={o} onPress={() => onChange({ ...form, [key]: o })}>
               {active ? (
                 <LinearGradient
-                  colors={['#7C3AED', '#06B6D4']}
+                  colors={['#0891B2', '#06B6D4']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999 }}
@@ -290,8 +298,8 @@ const EditModal: React.FC<{
                 <Text style={{ fontSize: 15, color: form.dob ? '#0F0F1A' : '#9CA3AF' }}>
                   {form.dob || 'Select your birthday'}
                 </Text>
-                <View style={{ backgroundColor: '#EDE9FE', padding: 6, borderRadius: 8 }}>
-                  <IconCalendar size={16} color="#7C3AED" />
+                <View style={{ backgroundColor: '#E0F7FA', padding: 6, borderRadius: 8 }}>
+                  <IconCalendar size={16} color="#0891B2" />
                 </View>
               </TouchableOpacity>
             </View>
@@ -376,14 +384,14 @@ const EditModal: React.FC<{
 
             <TouchableOpacity onPress={onSave} disabled={saving} style={{ marginTop: 8 }}>
               <LinearGradient
-                colors={['#7C3AED', '#4F46E5', '#06B6D4']}
+                colors={['#0891B2', '#0E7490', '#06B6D4']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={{
                   borderRadius: 16,
                   paddingVertical: 17,
                   alignItems: 'center',
-                  shadowColor: '#7C3AED',
+                  shadowColor: '#0891B2',
                   shadowOffset: { width: 0, height: 8 },
                   shadowOpacity: 0.45,
                   shadowRadius: 16,
@@ -425,7 +433,7 @@ const EditModal: React.FC<{
 const ProfileScreen: React.FC = () => {
   const { user, logout, refreshUser } = useAuth();
   const insets = useSafeAreaInsets();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useScrollToTopOnTabPress();
   const [ps0, ps1, ps2, ps3] = useEntranceAnimation(4, { initialDelay: 60, stagger: 110 });
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -437,6 +445,7 @@ const ProfileScreen: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [showAvatarSheet, setShowAvatarSheet] = useState(false);
   const avatarSheetAnim = useState(() => new Animated.Value(0))[0];
   const sheetDragY = useState(() => new Animated.Value(0))[0];
@@ -518,15 +527,34 @@ const ProfileScreen: React.FC = () => {
   const loadData = useCallback(async () => {
     if (!user) return;
 
-    // Load avatar from cache immediately (zero-latency display)
-    const cacheKey = `avatar_cache_${user.user_id}`;
+    const avatarCacheKey2 = `avatar_cache_${user.user_id}`;
+    const profileCacheKey = `profile_cache_${user.user_id}`;
+
+    // ── Step 1: Show cached data instantly (zero wait) ───────────────────────
     try {
-      const cached = await AsyncStorage.getItem(cacheKey);
-      if (cached) setAvatarUri(cached);
+      const [cachedAvatar, cachedProfile] = await Promise.all([
+        AsyncStorage.getItem(avatarCacheKey2),
+        AsyncStorage.getItem(profileCacheKey),
+      ]);
+      if (cachedAvatar) setAvatarUri(cachedAvatar);
+      if (cachedProfile) {
+        const p: UserProfile = JSON.parse(cachedProfile);
+        setProfile(p);
+        setForm({
+          name: user.name ?? '',
+          dob: user.dob ? new Date(user.dob as string).toISOString().slice(0, 10) : '',
+          gender: user.gender ?? '',
+          height: p.height ? String(p.height) : '',
+          weight: p.baseline_weight ? String(p.baseline_weight) : '',
+          bloodType: p.blood_type ?? '',
+        });
+        setLoading(false); // show UI immediately from cache
+      }
     } catch {
-      // cache miss is fine
+      // cache miss — continue to network fetch
     }
 
+    // ── Step 2: Fetch fresh data from API in background ──────────────────────
     try {
       const p = await getProfile(user.user_id);
       setProfile(p);
@@ -538,28 +566,28 @@ const ProfileScreen: React.FC = () => {
         weight: p.baseline_weight ? String(p.baseline_weight) : '',
         bloodType: p.blood_type ?? '',
       });
+      AsyncStorage.setItem(profileCacheKey, JSON.stringify(p)).catch(() => {});
     } catch {
-      // Non-blocking — profile section will show empty fields; user can still edit
+      // Non-blocking
     }
 
-    // Fetch avatar in background (separate endpoint keeps main profile payload lean)
+    // ── Step 3: Fetch avatar in background ───────────────────────────────────
     getAvatar(user.user_id)
       .then(({ avatar_url }) => {
         setAvatarUri(avatar_url);
         if (avatar_url) {
-          AsyncStorage.setItem(cacheKey, avatar_url).catch(() => {});
+          AsyncStorage.setItem(avatarCacheKey2, avatar_url).catch(() => {});
         } else {
-          AsyncStorage.removeItem(cacheKey).catch(() => {});
+          AsyncStorage.removeItem(avatarCacheKey2).catch(() => {});
         }
       })
       .catch(() => {});
 
-    setLoading(false);
+    setLoading(false); // ensure loading is cleared even if no cache existed
   }, [user]);
 
   useFocusEffect(
     useCallback(() => {
-      scrollRef.current?.scrollTo({ y: 0, animated: false });
       loadData();
     }, [loadData])
   );
@@ -715,30 +743,95 @@ const ProfileScreen: React.FC = () => {
       })
     : null;
 
+  const handleExportData = async () => {
+    if (!user || exporting) return;
+    setExporting(true);
+    try {
+      const token = await SecureStore.getItemAsync('access_token');
+      const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
+      const url = `${baseUrl}/users/${user.user_id}/profile/export`;
+
+      const firstName = (user.name ?? 'User').split(' ')[0];
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const fileName = `Nexara_Health_Report_${firstName}_${dateStr}.pdf`;
+      const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
+
+      // Delete any previous cached file first
+      const existing = await FileSystem.getInfoAsync(fileUri);
+      if (existing.exists) await FileSystem.deleteAsync(fileUri, { idempotent: true });
+
+      const result = await FileSystem.downloadAsync(url, fileUri, {
+        headers: {
+          Authorization: `Bearer ${token ?? ''}`,
+          'ngrok-skip-browser-warning': 'true',
+        },
+      });
+
+      if (result.status !== 200) {
+        // Read error body if any
+        let msg = `Server returned ${result.status}.`;
+        try {
+          const body = await FileSystem.readAsStringAsync(result.uri);
+          const parsed = JSON.parse(body);
+          if (parsed.message) msg = parsed.message;
+        } catch {}
+        Alert.alert('Export Failed', msg);
+        return;
+      }
+
+      const canShare = await Sharing.isAvailableAsync();
+      if (!canShare) {
+        Alert.alert('Sharing not available', 'Your device does not support sharing files.');
+        return;
+      }
+
+      await Sharing.shareAsync(result.uri, {
+        mimeType: 'application/pdf',
+        dialogTitle: fileName,
+        UTI: 'com.adobe.pdf',
+      });
+    } catch (err: any) {
+      console.error('Export error:', err);
+      Alert.alert('Error', err?.message ?? 'Failed to export data. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your account and all health data. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert('Are you sure?', 'Type DELETE to confirm.', [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Yes, Delete',
+                style: 'destructive',
+                onPress: async () => {
+                  if (!user) return;
+                  try {
+                    await deleteAccount(user.user_id);
+                    await AsyncStorage.clear();
+                    await logout();
+                  } catch {
+                    Alert.alert('Error', 'Failed to delete account. Please try again.');
+                  }
+                },
+              },
+            ]);
+          },
+        },
+      ]
+    );
+  };
+
   const MENU_SECTIONS = [
-    {
-      title: 'Account',
-      items: [
-        {
-          icon: IconUser,
-          label: 'Personal Data',
-          sub: 'Name, gender, birthday',
-          grad: ['#7C3AED', '#A78BFA'] as [string, string],
-        },
-        {
-          icon: IconHeart,
-          label: 'Health Metrics',
-          sub: 'Blood type, BMI, vitals',
-          grad: ['#EC4899', '#F43F5E'] as [string, string],
-        },
-        {
-          icon: IconGlobe,
-          label: 'Region & Language',
-          sub: user?.time_zone ?? 'Not set',
-          grad: ['#10B981', '#34D399'] as [string, string],
-        },
-      ],
-    },
     {
       title: 'App',
       items: [
@@ -755,6 +848,51 @@ const ProfileScreen: React.FC = () => {
           sub: `${prefs.weightUnit} · ${prefs.heightUnit} · ${prefs.waterUnit}`,
           grad: ['#6366F1', '#8B5CF6'] as [string, string],
           onPress: () => setShowPrefs(true),
+        },
+      ],
+    },
+    {
+      title: 'Data & Privacy',
+      items: [
+        {
+          icon: IconShield,
+          label: 'Export My Data',
+          sub: 'Download your health data',
+          grad: ['#0891B2', '#06B6D4'] as [string, string],
+          onPress: handleExportData,
+        },
+        {
+          icon: IconTrash,
+          label: 'Delete Account',
+          sub: 'Permanently remove all data',
+          grad: ['#EF4444', '#DC2626'] as [string, string],
+          onPress: handleDeleteAccount,
+        },
+      ],
+    },
+    {
+      title: 'Support',
+      items: [
+        {
+          icon: IconStar,
+          label: 'Rate the App',
+          sub: 'Love Nexara? Leave a review',
+          grad: ['#F59E0B', '#F97316'] as [string, string],
+          onPress: () => Linking.openURL('https://apps.apple.com'),
+        },
+        {
+          icon: IconMail,
+          label: 'Send Feedback',
+          sub: 'Report a bug or suggestion',
+          grad: ['#10B981', '#06B6D4'] as [string, string],
+          onPress: () => Linking.openURL('mailto:support@nexara.app?subject=Feedback'),
+        },
+        {
+          icon: IconInfo,
+          label: 'Help & FAQ',
+          sub: 'Get answers to common questions',
+          grad: ['#3B82F6', '#6366F1'] as [string, string],
+          onPress: () => Linking.openURL('https://nexara.app/help'),
         },
       ],
     },
@@ -792,57 +930,66 @@ const ProfileScreen: React.FC = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F4F5FA' }}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* Decorative background */}
-      <Svg width={SW} height={420} style={{ position: 'absolute', top: 0 }}>
-        <Defs>
-          <SvgGrad id="bg1" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor="#7C3AED" stopOpacity="0.05" />
-            <Stop offset="100%" stopColor="#06B6D4" stopOpacity="0" />
-          </SvgGrad>
-          <SvgGrad id="bg2" x1="100%" y1="0%" x2="0%" y2="100%">
-            <Stop offset="0%" stopColor="#EC4899" stopOpacity="0.05" />
-            <Stop offset="100%" stopColor="#7C3AED" stopOpacity="0" />
-          </SvgGrad>
-        </Defs>
-        <Circle cx={SW * 0.15} cy={80} r={200} fill="url(#bg1)" />
-        <Circle cx={SW * 0.9} cy={200} r={160} fill="url(#bg2)" />
-      </Svg>
-
-      <ScrollView
-        ref={scrollRef}
-        showsVerticalScrollIndicator={false}
-        automaticallyAdjustContentInsets={false}
-        contentInsetAdjustmentBehavior="never"
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: 120 }}
-      >
-        {/* ── Hero Header ──────────────────────────────────────────────── */}
-        <Animated.View style={entranceStyle(ps0)}>
+      {/* Fixed hero */}
+      <Animated.View style={entranceStyle(ps0)}>
+        <LinearGradient
+          colors={['#0C2340', '#0891B2']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            height: 280,
+            paddingTop: 56,
+            paddingHorizontal: 24,
+            paddingBottom: 20,
+            borderBottomLeftRadius: 32,
+            borderBottomRightRadius: 32,
+            overflow: 'hidden',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {/* Decorative circles */}
           <View
             style={{
-              alignItems: 'center',
-              paddingTop: insets.top + 20,
-              paddingBottom: 36,
-              paddingHorizontal: 24,
+              position: 'absolute',
+              width: 200,
+              height: 200,
+              borderRadius: 100,
+              top: -60,
+              right: -50,
+              backgroundColor: 'rgba(255,255,255,0.06)',
             }}
-          >
+          />
+          <View
+            style={{
+              position: 'absolute',
+              width: 120,
+              height: 120,
+              borderRadius: 60,
+              bottom: -30,
+              left: -30,
+              backgroundColor: 'rgba(255,255,255,0.04)',
+            }}
+          />
+
+          <View style={{ alignItems: 'center' }}>
             {/* Avatar with rings */}
             <TouchableOpacity
               onPress={handleAvatarPress}
               activeOpacity={0.85}
               disabled={avatarUploading}
-              style={{ alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}
+              style={{ alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}
             >
               {/* Outer ring */}
               <View
                 style={{
-                  width: 120,
-                  height: 120,
-                  borderRadius: 60,
-                  borderWidth: 1,
-                  borderColor: '#EDE9FE',
+                  width: 88,
+                  height: 88,
+                  borderRadius: 44,
+                  borderWidth: 1.5,
+                  borderColor: 'rgba(255,255,255,0.35)',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
@@ -850,11 +997,11 @@ const ProfileScreen: React.FC = () => {
                 {/* Inner ring */}
                 <View
                   style={{
-                    width: 108,
-                    height: 108,
-                    borderRadius: 54,
+                    width: 78,
+                    height: 78,
+                    borderRadius: 39,
                     borderWidth: 1,
-                    borderColor: '#EDE9FE',
+                    borderColor: 'rgba(255,255,255,0.2)',
                     alignItems: 'center',
                     justifyContent: 'center',
                     overflow: 'hidden',
@@ -863,30 +1010,25 @@ const ProfileScreen: React.FC = () => {
                   {avatarUri ? (
                     <Image
                       source={{ uri: avatarUri }}
-                      style={{ width: 96, height: 96, borderRadius: 48 }}
+                      style={{ width: 70, height: 70, borderRadius: 35 }}
                       resizeMode="cover"
                     />
                   ) : (
                     <LinearGradient
-                      colors={['#7C3AED', '#4F46E5', '#06B6D4']}
+                      colors={['#0891B2', '#0E7490', '#06B6D4']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={{
-                        width: 96,
-                        height: 96,
-                        borderRadius: 48,
+                        width: 70,
+                        height: 70,
+                        borderRadius: 35,
                         alignItems: 'center',
                         justifyContent: 'center',
-                        shadowColor: '#7C3AED',
-                        shadowOffset: { width: 0, height: 16 },
-                        shadowOpacity: 0.6,
-                        shadowRadius: 24,
-                        elevation: 16,
                       }}
                     >
                       <Text
                         style={{
-                          fontSize: 38,
+                          fontSize: 28,
                           fontWeight: '900',
                           color: '#fff',
                           letterSpacing: -1,
@@ -903,15 +1045,15 @@ const ProfileScreen: React.FC = () => {
               <View
                 style={{
                   position: 'absolute',
-                  bottom: 2,
-                  right: 2,
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  borderWidth: 2.5,
-                  borderColor: '#F4F5FA',
+                  bottom: 0,
+                  right: 0,
+                  width: 26,
+                  height: 26,
+                  borderRadius: 13,
+                  borderWidth: 2,
+                  borderColor: 'rgba(255,255,255,0.3)',
                   overflow: 'hidden',
-                  shadowColor: '#7C3AED',
+                  shadowColor: '#0891B2',
                   shadowOffset: { width: 0, height: 4 },
                   shadowOpacity: 0.5,
                   shadowRadius: 8,
@@ -919,7 +1061,7 @@ const ProfileScreen: React.FC = () => {
                 }}
               >
                 <LinearGradient
-                  colors={['#7C3AED', '#06B6D4']}
+                  colors={['#0891B2', '#06B6D4']}
                   style={{
                     flex: 1,
                     borderRadius: 14,
@@ -939,11 +1081,12 @@ const ProfileScreen: React.FC = () => {
             {/* Name */}
             <Text
               style={{
-                fontSize: 26,
+                fontSize: 20,
                 fontWeight: '900',
-                color: '#0F0F1A',
+                color: '#fff',
                 letterSpacing: -0.8,
                 textAlign: 'center',
+                marginTop: 8,
               }}
             >
               {user?.name || 'Athlete'}
@@ -953,8 +1096,8 @@ const ProfileScreen: React.FC = () => {
             <View
               style={{
                 flexDirection: 'row',
-                gap: 8,
-                marginTop: 14,
+                gap: 6,
+                marginTop: 8,
                 flexWrap: 'wrap',
                 justifyContent: 'center',
               }}
@@ -962,15 +1105,15 @@ const ProfileScreen: React.FC = () => {
               {user?.gender && (
                 <View
                   style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 6,
+                    paddingHorizontal: 12,
+                    paddingVertical: 5,
                     borderRadius: 999,
-                    backgroundColor: '#EDE9FE',
+                    backgroundColor: 'rgba(255,255,255,0.15)',
                     borderWidth: 1,
-                    borderColor: '#C4B5FD',
+                    borderColor: 'rgba(255,255,255,0.25)',
                   }}
                 >
-                  <Text style={{ color: '#7C3AED', fontSize: 12, fontWeight: '700' }}>
+                  <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>
                     {user.gender}
                   </Text>
                 </View>
@@ -978,15 +1121,15 @@ const ProfileScreen: React.FC = () => {
               {age && (
                 <View
                   style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 6,
+                    paddingHorizontal: 12,
+                    paddingVertical: 5,
                     borderRadius: 999,
-                    backgroundColor: '#FEF3C7',
+                    backgroundColor: 'rgba(255,255,255,0.15)',
                     borderWidth: 1,
-                    borderColor: '#FDE68A',
+                    borderColor: 'rgba(255,255,255,0.25)',
                   }}
                 >
-                  <Text style={{ color: '#D97706', fontSize: 12, fontWeight: '700' }}>
+                  <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>
                     {age} years old
                   </Text>
                 </View>
@@ -994,15 +1137,15 @@ const ProfileScreen: React.FC = () => {
               {profile?.blood_type && (
                 <View
                   style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 6,
+                    paddingHorizontal: 12,
+                    paddingVertical: 5,
                     borderRadius: 999,
-                    backgroundColor: '#FCE7F3',
+                    backgroundColor: 'rgba(255,255,255,0.15)',
                     borderWidth: 1,
-                    borderColor: '#FBCFE8',
+                    borderColor: 'rgba(255,255,255,0.25)',
                   }}
                 >
-                  <Text style={{ color: '#EC4899', fontSize: 12, fontWeight: '700' }}>
+                  <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>
                     {profile.blood_type}
                   </Text>
                 </View>
@@ -1010,31 +1153,36 @@ const ProfileScreen: React.FC = () => {
             </View>
 
             {/* Edit button */}
-            <TouchableOpacity onPress={() => setEditOpen(true)} style={{ marginTop: 20 }}>
-              <LinearGradient
-                colors={['#7C3AED', '#4F46E5', '#06B6D4']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
+            <TouchableOpacity onPress={() => setEditOpen(true)} style={{ marginTop: 10 }}>
+              <View
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
-                  gap: 8,
-                  paddingHorizontal: 28,
-                  paddingVertical: 12,
+                  gap: 7,
+                  paddingHorizontal: 24,
+                  paddingVertical: 9,
                   borderRadius: 999,
-                  shadowColor: '#7C3AED',
-                  shadowOffset: { width: 0, height: 8 },
-                  shadowOpacity: 0.4,
-                  shadowRadius: 16,
-                  elevation: 10,
+                  backgroundColor: 'rgba(255,255,255,0.15)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.3)',
                 }}
               >
-                <IconEdit size={14} color="#fff" />
-                <Text style={{ color: '#fff', fontSize: 14, fontWeight: '800' }}>Edit Profile</Text>
-              </LinearGradient>
+                <IconEdit size={13} color="#fff" />
+                <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>Edit Profile</Text>
+              </View>
             </TouchableOpacity>
           </View>
-        </Animated.View>
+        </LinearGradient>
+      </Animated.View>
+
+      <ScrollView
+        ref={scrollRef}
+        showsVerticalScrollIndicator={false}
+        automaticallyAdjustContentInsets={false}
+        contentInsetAdjustmentBehavior="never"
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: 120, paddingTop: 20 }}
+      >
         <Animated.View style={entranceStyle(ps1)}>
           <View style={{ paddingHorizontal: 20 }}>
             {/* ── Body Stats ───────────────────────────────────────────── */}
@@ -1093,7 +1241,7 @@ const ProfileScreen: React.FC = () => {
                     borderWidth: 1,
                     borderColor: '#E4E7F0',
                     backgroundColor: '#FFFFFF',
-                    shadowColor: '#7C3AED',
+                    shadowColor: '#0891B2',
                     shadowOffset: { width: 0, height: 2 },
                     shadowOpacity: 0.07,
                     shadowRadius: 8,
@@ -1131,103 +1279,6 @@ const ProfileScreen: React.FC = () => {
                 </View>
               ))}
             </View>
-
-            {/* ── Personal Info card ───────────────────────────────────── */}
-            <Text
-              style={{
-                fontSize: 12,
-                fontWeight: '700',
-                color: '#4B5563',
-                letterSpacing: 1.2,
-                marginBottom: 12,
-              }}
-            >
-              PERSONAL INFO
-            </Text>
-            <View
-              style={{
-                backgroundColor: '#FFFFFF',
-                borderRadius: 20,
-                borderWidth: 1,
-                borderColor: '#E4E7F0',
-                marginBottom: 28,
-                overflow: 'hidden',
-                shadowColor: '#7C3AED',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.06,
-                shadowRadius: 8,
-                elevation: 2,
-              }}
-            >
-              {[
-                {
-                  label: 'Full Name',
-                  value: user?.name || '—',
-                  Icon: IconUser,
-                  color: '#A78BFA',
-                  isPHI: true,
-                },
-                {
-                  label: 'Birthday',
-                  value: dobStr || '—',
-                  Icon: IconCalendar,
-                  color: '#FBBF24',
-                  isPHI: true,
-                },
-                {
-                  label: 'Gender',
-                  value: user?.gender || '—',
-                  Icon: IconInfo,
-                  color: '#34D399',
-                  isPHI: false,
-                },
-                {
-                  label: 'Blood Type',
-                  value: profile?.blood_type || '—',
-                  Icon: IconHeart,
-                  color: '#F472B6',
-                  isPHI: true,
-                },
-              ].map((row, i, arr) => (
-                <View
-                  key={row.label}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingHorizontal: 18,
-                    paddingVertical: 15,
-                    borderBottomWidth: i < arr.length - 1 ? 1 : 0,
-                    borderColor: '#F3F4F8',
-                  }}
-                >
-                  <View
-                    style={{
-                      width: 34,
-                      height: 34,
-                      borderRadius: 10,
-                      backgroundColor: `${row.color}18`,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginRight: 14,
-                    }}
-                  >
-                    <row.Icon size={16} color={row.color} />
-                  </View>
-                  <Text style={{ flex: 1, fontSize: 13, color: '#6B7280', fontWeight: '500' }}>
-                    {row.label}
-                  </Text>
-                  {row.isPHI ? (
-                    <Text style={{ fontSize: 14, color: '#0F0F1A', fontWeight: '600' }}>
-                      {row.value}
-                    </Text>
-                  ) : (
-                    <Text style={{ fontSize: 14, color: '#0F0F1A', fontWeight: '600' }}>
-                      {row.value}
-                    </Text>
-                  )}
-                </View>
-              ))}
-            </View>
           </View>
         </Animated.View>
         {/* ── Menu sections ────────────────────────────────────────── */}
@@ -1253,7 +1304,7 @@ const ProfileScreen: React.FC = () => {
                     borderWidth: 1,
                     borderColor: '#E4E7F0',
                     overflow: 'hidden',
-                    shadowColor: '#7C3AED',
+                    shadowColor: '#0891B2',
                     shadowOffset: { width: 0, height: 2 },
                     shadowOpacity: 0.06,
                     shadowRadius: 8,
@@ -1301,18 +1352,14 @@ const ProfileScreen: React.FC = () => {
                         <Switch
                           value={notifs}
                           onValueChange={handleNotifsToggle}
-                          trackColor={{ false: '#E4E7F0', true: '#7C3AED' }}
+                          trackColor={{ false: '#E4E7F0', true: '#0891B2' }}
                           thumbColor="#fff"
                           ios_backgroundColor="#E4E7F0"
                         />
+                      ) : item.label === 'Export My Data' && exporting ? (
+                        <ActivityIndicator size={16} color="#0891B2" />
                       ) : (
-                        <View
-                          style={{
-                            backgroundColor: '#F3F4F8',
-                            borderRadius: 8,
-                            padding: 5,
-                          }}
-                        >
+                        <View style={{ backgroundColor: '#F3F4F8', borderRadius: 8, padding: 5 }}>
                           <IconChevronRight size={14} color="#6B7280" />
                         </View>
                       )}
@@ -1528,7 +1575,7 @@ const ProfileScreen: React.FC = () => {
           >
             {/* Gradient border wrapper */}
             <LinearGradient
-              colors={['#7C3AED', '#4F46E5', '#06B6D4']}
+              colors={['#0891B2', '#0E7490', '#06B6D4']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={{ borderTopLeftRadius: 33, borderTopRightRadius: 33, padding: 1.5 }}
@@ -1538,8 +1585,9 @@ const ProfileScreen: React.FC = () => {
                   backgroundColor: '#FFFFFF',
                   borderTopLeftRadius: 32,
                   borderTopRightRadius: 32,
-                  paddingBottom: insets.bottom + 24,
+                  paddingBottom: insets.bottom + 40,
                   overflow: 'hidden',
+                  minHeight: '95%',
                 }}
               >
                 {/* Drag handle row */}
@@ -1582,7 +1630,7 @@ const ProfileScreen: React.FC = () => {
                   {/* Avatar with gradient ring */}
                   <View style={{ marginBottom: 16, position: 'relative' }}>
                     <LinearGradient
-                      colors={['#7C3AED', '#4F46E5', '#06B6D4']}
+                      colors={['#0891B2', '#0E7490', '#06B6D4']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={{
@@ -1590,7 +1638,7 @@ const ProfileScreen: React.FC = () => {
                         height: 100,
                         borderRadius: 50,
                         padding: 3,
-                        shadowColor: '#7C3AED',
+                        shadowColor: '#0891B2',
                         shadowOffset: { width: 0, height: 10 },
                         shadowOpacity: 0.35,
                         shadowRadius: 20,
@@ -1603,7 +1651,7 @@ const ProfileScreen: React.FC = () => {
                           height: 94,
                           borderRadius: 47,
                           overflow: 'hidden',
-                          backgroundColor: '#EDE9FE',
+                          backgroundColor: '#E0F7FA',
                         }}
                       >
                         {avatarUri ? (
@@ -1614,7 +1662,7 @@ const ProfileScreen: React.FC = () => {
                           />
                         ) : (
                           <LinearGradient
-                            colors={['#7C3AED', '#4F46E5', '#06B6D4']}
+                            colors={['#0891B2', '#0E7490', '#06B6D4']}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 1 }}
                             style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
@@ -1643,7 +1691,7 @@ const ProfileScreen: React.FC = () => {
                           width: 28,
                           height: 28,
                           borderRadius: 14,
-                          backgroundColor: '#7C3AED',
+                          backgroundColor: '#0891B2',
                           borderWidth: 2,
                           borderColor: '#fff',
                           alignItems: 'center',
@@ -1678,7 +1726,7 @@ const ProfileScreen: React.FC = () => {
                 </View>
 
                 {/* Action buttons */}
-                <View style={{ paddingHorizontal: 16, gap: 10, marginBottom: 8 }}>
+                <View style={{ paddingHorizontal: 16, gap: 8, marginBottom: 6 }}>
                   {/* Take Photo */}
                   <TouchableOpacity onPress={pickFromCamera} activeOpacity={0.75}>
                     <LinearGradient
@@ -1691,12 +1739,12 @@ const ProfileScreen: React.FC = () => {
                         padding: 14,
                         borderRadius: 18,
                         borderWidth: 1.5,
-                        borderColor: '#EDE9FE',
+                        borderColor: '#E0F7FA',
                         gap: 14,
                       }}
                     >
                       <LinearGradient
-                        colors={['#7C3AED', '#4F46E5']}
+                        colors={['#0891B2', '#0E7490']}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                         style={{
@@ -1722,12 +1770,12 @@ const ProfileScreen: React.FC = () => {
                           width: 28,
                           height: 28,
                           borderRadius: 8,
-                          backgroundColor: '#EDE9FE',
+                          backgroundColor: '#E0F7FA',
                           alignItems: 'center',
                           justifyContent: 'center',
                         }}
                       >
-                        <IconChevronRight size={13} color="#7C3AED" />
+                        <IconChevronRight size={13} color="#0891B2" />
                       </View>
                     </LinearGradient>
                   </TouchableOpacity>
@@ -1792,12 +1840,12 @@ const ProfileScreen: React.FC = () => {
                         style={{
                           flexDirection: 'row',
                           alignItems: 'center',
-                          padding: 14,
+                          padding: 10,
                           borderRadius: 18,
                           borderWidth: 1.5,
                           borderColor: '#FECACA',
                           backgroundColor: '#FFF5F5',
-                          gap: 14,
+                          gap: 12,
                         }}
                       >
                         <View
@@ -1845,8 +1893,8 @@ const ProfileScreen: React.FC = () => {
                     textAlign: 'center',
                     fontSize: 11,
                     color: '#D1D5DB',
-                    marginTop: 12,
-                    paddingBottom: 4,
+                    marginTop: 2,
+                    marginBottom: 4,
                   }}
                 >
                   Photos are stored securely and only visible to you

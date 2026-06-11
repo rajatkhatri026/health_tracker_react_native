@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -46,18 +47,31 @@ const GoalsScreen: React.FC = () => {
   const [endDate, setEndDate] = useState('');
   const [recurrence, setRecurrence] = useState<GoalRecurrence>('none');
 
+  const goalsCacheKey = user ? `goals_cache_${user.user_id}` : null;
+
   const loadGoals = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
+    // Show cached instantly
+    if (goalsCacheKey) {
+      try {
+        const cached = await AsyncStorage.getItem(goalsCacheKey);
+        if (cached) {
+          setGoals(JSON.parse(cached));
+          setLoading(false);
+        }
+      } catch {}
+    }
+    // Refresh from API in background
     try {
       const data = await getGoals(user.user_id);
       setGoals(data);
+      if (goalsCacheKey) AsyncStorage.setItem(goalsCacheKey, JSON.stringify(data)).catch(() => {});
     } catch {
       Alert.alert('Error', 'Failed to load goals. Pull down to retry.');
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, goalsCacheKey]);
 
   useEffect(() => {
     loadGoals();

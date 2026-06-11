@@ -14,6 +14,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useEntranceAnimation, entranceStyle } from '../../hooks/useEntranceAnimation';
+import { useScrollToTopOnTabPress } from '../../hooks/useScrollToTopOnTabPress';
 import Svg, { Circle, Defs, LinearGradient as SvgGrad, Stop, Rect } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
@@ -24,45 +25,46 @@ import { CaloriesSkeleton } from '../../components/Skeleton/Skeleton';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const CHART_H = 110;
-const DAILY_GOAL = 500;
 
 const formatCal = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
 
 // ── Ring ──────────────────────────────────────────────────────────────────────
 const CalorieRing: React.FC<{ value: number; goal: number }> = ({ value, goal }) => {
-  const R = 88;
-  const stroke = 14;
+  const R = 54;
+  const stroke = 10;
   const circumference = 2 * Math.PI * R;
   const progress = Math.min(value / Math.max(goal, 1), 1);
   const strokeDash = circumference * progress;
   const pct = Math.round(progress * 100);
+  const size = 130;
+  const cx = size / 2;
 
   return (
     <View style={{ alignItems: 'center' }}>
-      <Svg width={210} height={210} viewBox="0 0 210 210">
+      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <Defs>
           <SvgGrad id="calGrad" x1="0" y1="0" x2="1" y2="1">
             <Stop offset="0" stopColor="#F59E0B" />
             <Stop offset="1" stopColor="#EF4444" />
           </SvgGrad>
           <SvgGrad id="trackGrad" x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor="#FDE68A" stopOpacity="0.8" />
-            <Stop offset="1" stopColor="#FECACA" stopOpacity="0.8" />
+            <Stop offset="0" stopColor="#ffffff" stopOpacity="0.15" />
+            <Stop offset="1" stopColor="#ffffff" stopOpacity="0.15" />
           </SvgGrad>
         </Defs>
         {/* Track */}
-        <Circle cx={105} cy={105} r={R} stroke="url(#trackGrad)" strokeWidth={stroke} fill="none" />
+        <Circle cx={cx} cy={cx} r={R} stroke="url(#trackGrad)" strokeWidth={stroke} fill="none" />
         {/* Progress */}
         <Circle
-          cx={105}
-          cy={105}
+          cx={cx}
+          cy={cx}
           r={R}
           stroke="url(#calGrad)"
           strokeWidth={stroke}
           fill="none"
           strokeDasharray={`${strokeDash} ${circumference}`}
           strokeLinecap="round"
-          transform="rotate(-90 105 105)"
+          transform={`rotate(-90 ${cx} ${cx})`}
         />
       </Svg>
       <View style={s.ringCenter}>
@@ -183,322 +185,335 @@ const CaloriesScreen: React.FC = () => {
     weeklyData,
     weeklyTotal,
     weeklyAvg,
-    loading,
+    dailyGoal,
     profile,
     saveProfile,
     refresh,
   } = useCalories();
 
   const [showProfile, setShowProfile] = useState(false);
+  const hasPromptedProfile = React.useRef(false);
 
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useScrollToTopOnTabPress();
   const refreshRef = React.useRef(refresh);
   React.useEffect(() => {
     refreshRef.current = refresh;
   }, [refresh]);
   useFocusEffect(
     useCallback(() => {
-      scrollRef.current?.scrollTo({ y: 0, animated: false });
       refreshRef.current();
     }, [])
   );
 
   React.useEffect(() => {
-    if (!loading && !profile) setShowProfile(true);
-  }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!profile && !hasPromptedProfile.current) {
+      hasPromptedProfile.current = true;
+      setShowProfile(true);
+    }
+  }, [profile]);
 
-  const maxCal = Math.max(...weeklyData.map((d) => d.total), DAILY_GOAL, 1);
+  const maxCal = Math.max(...weeklyData.map((d) => d.total), dailyGoal, 1);
 
-  if (loading) return <CaloriesSkeleton />;
+  const pct = Math.round(Math.min(todayTotal / Math.max(dailyGoal, 1), 1) * 100);
 
   return (
     <View style={s.screen}>
-      <StatusBar barStyle="dark-content" />
-      <ScrollView
-        ref={scrollRef}
-        showsVerticalScrollIndicator={false}
-        automaticallyAdjustContentInsets={false}
-        contentInsetAdjustmentBehavior="never"
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: 110 }}
-      >
-        {/* ── Header ── */}
-        <Animated.View style={entranceStyle(cal0)}>
-          <View style={s.header}>
-            {/* Title row */}
-            <View style={s.titleRow}>
-              <View style={s.titleLeft}>
-                <View style={s.titleIconWrap}>
-                  <IconFlame size={18} color="#F59E0B" />
-                </View>
-                <Text style={s.titleText}>Calories Burned</Text>
-              </View>
-              <TouchableOpacity onPress={() => setShowProfile(true)} style={s.profileBtn}>
-                <IconUser size={13} color="#F59E0B" />
-                {profile ? (
-                  <View>
-                    <Text style={s.profileBtnValue}>
-                      {profile.weightKg}kg · {profile.ageYears}y
-                    </Text>
-                    <Text style={s.profileBtnSub}>{profile.gender}</Text>
-                  </View>
-                ) : (
-                  <Text style={s.profileBtnEmpty}>Set Profile</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-            {/* Ring or empty state */}
+      {/* ── Fixed Gradient Hero ── */}
+      <Animated.View style={[s.heroWrap, entranceStyle(cal0)]}>
+        <LinearGradient
+          colors={['#7C2D12', '#F59E0B']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={s.heroGrad}
+        >
+          {/* Decorative circles */}
+          <View
+            style={[s.deco, { width: 220, height: 220, top: -70, right: -60, opacity: 0.08 }]}
+          />
+          <View
+            style={[s.deco, { width: 130, height: 130, bottom: 20, left: -40, opacity: 0.06 }]}
+          />
+
+          {/* Top row */}
+          <View style={s.heroTopRow}>
+            <View style={s.heroTitleWrap}>
+              <IconFlame size={16} color="rgba(255,255,255,0.9)" />
+              <Text style={s.heroTitle}>Calories Burned</Text>
+            </View>
+            <TouchableOpacity onPress={() => setShowProfile(true)} style={s.heroProfileBtn}>
+              <IconUser size={12} color="rgba(255,255,255,0.9)" />
+              <Text style={s.heroProfileTxt}>
+                {profile ? `${profile.weightKg}kg` : 'Set Profile'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Ring + 3 chips */}
+          <View style={s.heroContent}>
             {!profile ? (
-              <View style={s.emptyRing}>
-                <View style={s.emptyRingIcon}>
-                  <IconFlame size={44} color="#F59E0B" />
+              /* No-profile state inside hero */
+              <View style={s.heroEmpty}>
+                <View style={s.heroEmptyIcon}>
+                  <IconFlame size={32} color="#F59E0B" />
                 </View>
-                <Text style={s.emptyRingText}>
-                  Set your profile to{'\n'}start tracking calories
-                </Text>
-                <TouchableOpacity onPress={() => setShowProfile(true)}>
-                  <LinearGradient
-                    colors={['#F59E0B', '#EF4444']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={s.emptyRingBtn}
-                  >
-                    <Text style={s.emptyRingBtnText}>Set Profile</Text>
-                  </LinearGradient>
+                <Text style={s.heroEmptyTxt}>Set profile to track calories</Text>
+                <TouchableOpacity onPress={() => setShowProfile(true)} style={s.heroEmptyBtn}>
+                  <Text style={s.heroEmptyBtnTxt}>Set Profile</Text>
                 </TouchableOpacity>
               </View>
             ) : (
-              <CalorieRing value={todayTotal} goal={DAILY_GOAL} />
-            )}
-
-            {/* Breakdown chips */}
-            {profile && (
-              <View style={s.breakdownRow}>
-                <View style={s.breakdownChip}>
-                  <LinearGradient
-                    colors={['#FEF3C7', '#FDE68A']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={s.breakdownChipGrad}
-                  >
-                    <View style={s.breakdownChipIcon}>
-                      <IconRun size={16} color="#D97706" />
-                    </View>
-                    <View>
-                      <Text style={[s.breakdownChipVal, { color: '#D97706' }]}>
-                        {todayStepsCalories} kcal
-                      </Text>
-                      <Text style={s.breakdownChipLabel}>{todaySteps.toLocaleString()} steps</Text>
-                    </View>
-                  </LinearGradient>
+              <>
+                {/* Ring */}
+                <View style={s.heroRingWrap}>
+                  <CalorieRing value={todayTotal} goal={dailyGoal} />
                 </View>
-                <View style={s.breakdownChip}>
-                  <LinearGradient
-                    colors={['#FEE2E2', '#FECACA']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={s.breakdownChipGrad}
-                  >
-                    <View style={[s.breakdownChipIcon, { backgroundColor: '#FCA5A5' }]}>
-                      <IconActivity size={16} color="#EF4444" />
-                    </View>
-                    <View>
-                      <Text style={[s.breakdownChipVal, { color: '#EF4444' }]}>
-                        {todayWorkoutCalories} kcal
+                {/* 3 frosted chips */}
+                <View style={s.heroChips}>
+                  {[
+                    { label: 'GOAL', value: `${dailyGoal}`, unit: 'kcal' },
+                    { label: 'BURNED', value: `${todayTotal}`, unit: 'kcal' },
+                    {
+                      label: 'REMAINING',
+                      value: `${Math.max(dailyGoal - todayTotal, 0)}`,
+                      unit: 'kcal',
+                    },
+                  ].map((chip) => (
+                    <View key={chip.label} style={s.heroChip}>
+                      <Text style={s.heroChipLabel}>{chip.label}</Text>
+                      <Text style={s.heroChipVal}>
+                        {chip.value} <Text style={s.heroChipUnit}>{chip.unit}</Text>
                       </Text>
-                      <Text style={s.breakdownChipLabel}>from workouts</Text>
                     </View>
-                  </LinearGradient>
+                  ))}
                 </View>
-              </View>
+              </>
             )}
           </View>
-        </Animated.View>
+        </LinearGradient>
+      </Animated.View>
+
+      <ScrollView
+        ref={scrollRef}
+        showsVerticalScrollIndicator={false}
+        style={{ marginTop: HERO_H }}
+        contentContainerStyle={{ paddingBottom: 110, paddingTop: 20 }}
+      >
+        {/* ── Breakdown chips ── */}
+        {profile && (
+          <Animated.View style={[entranceStyle(cal0), s.section]}>
+            <View style={s.breakdownRow}>
+              <View style={s.breakdownChip}>
+                <LinearGradient
+                  colors={['#FEF3C7', '#FDE68A']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={s.breakdownChipGrad}
+                >
+                  <View style={s.breakdownChipIcon}>
+                    <IconRun size={16} color="#D97706" />
+                  </View>
+                  <View>
+                    <Text style={[s.breakdownChipVal, { color: '#D97706' }]}>
+                      {todayStepsCalories} kcal
+                    </Text>
+                    <Text style={s.breakdownChipLabel}>{todaySteps.toLocaleString()} steps</Text>
+                  </View>
+                </LinearGradient>
+              </View>
+              <View style={s.breakdownChip}>
+                <LinearGradient
+                  colors={['#FEE2E2', '#FECACA']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={s.breakdownChipGrad}
+                >
+                  <View style={[s.breakdownChipIcon, { backgroundColor: '#FCA5A5' }]}>
+                    <IconActivity size={16} color="#EF4444" />
+                  </View>
+                  <View>
+                    <Text style={[s.breakdownChipVal, { color: '#EF4444' }]}>
+                      {todayWorkoutCalories} kcal
+                    </Text>
+                    <Text style={s.breakdownChipLabel}>from workouts</Text>
+                  </View>
+                </LinearGradient>
+              </View>
+            </View>
+          </Animated.View>
+        )}
 
         {/* ── Stats row ── */}
-        <Animated.View style={entranceStyle(cal1)}>
-          <View style={s.section}>
-            {/* No profile banner */}
-            {!profile && (
-              <View style={s.warningBanner}>
-                <Text style={s.warningTitle}>⚠️ Profile required</Text>
-                <Text style={s.warningDesc}>
-                  Enter your weight, age and gender to calculate accurate calories burned.
-                </Text>
-              </View>
-            )}
-
-            <View style={s.statsRow}>
-              {[
-                {
-                  label: 'Week Total',
-                  value: formatCal(weeklyTotal),
-                  color: '#F59E0B',
-                  bg: '#FFFBEB',
-                  border: '#FDE68A',
-                },
-                {
-                  label: 'Daily Avg',
-                  value: formatCal(weeklyAvg),
-                  color: '#EF4444',
-                  bg: '#FFF5F5',
-                  border: '#FECACA',
-                },
-                {
-                  label: 'Today',
-                  value: formatCal(todayTotal),
-                  color: '#10B981',
-                  bg: '#F0FDF4',
-                  border: '#A7F3D0',
-                },
-              ].map((stat) => (
-                <View
-                  key={stat.label}
-                  style={[s.statCard, { backgroundColor: stat.bg, borderColor: stat.border }]}
-                >
-                  <Text style={[s.statValue, { color: stat.color }]}>{stat.value}</Text>
-                  <Text style={s.statLabel}>{stat.label}</Text>
-                </View>
-              ))}
+        <Animated.View style={[entranceStyle(cal1), s.section]}>
+          {!profile && (
+            <View style={s.warningBanner}>
+              <Text style={s.warningTitle}>⚠️ Profile required</Text>
+              <Text style={s.warningDesc}>
+                Enter your weight, age and gender to calculate accurate calories burned.
+              </Text>
             </View>
+          )}
+          <View style={s.statsRow}>
+            {[
+              {
+                label: 'Week Total',
+                value: formatCal(weeklyTotal),
+                color: '#F59E0B',
+                bg: '#FFFBEB',
+                border: '#FDE68A',
+              },
+              {
+                label: 'Daily Avg',
+                value: formatCal(weeklyAvg),
+                color: '#EF4444',
+                bg: '#FFF5F5',
+                border: '#FECACA',
+              },
+              {
+                label: 'Today',
+                value: formatCal(todayTotal),
+                color: '#10B981',
+                bg: '#F0FDF4',
+                border: '#A7F3D0',
+              },
+            ].map((stat) => (
+              <View
+                key={stat.label}
+                style={[s.statCard, { backgroundColor: stat.bg, borderColor: stat.border }]}
+              >
+                <Text style={[s.statValue, { color: stat.color }]}>{stat.value}</Text>
+                <Text style={s.statLabel}>{stat.label}</Text>
+              </View>
+            ))}
           </View>
         </Animated.View>
 
         {/* ── Weekly chart ── */}
-        <Animated.View style={entranceStyle(cal2)}>
-          <View style={s.section}>
-            <View style={s.card}>
-              <View style={s.cardHeader}>
-                <Text style={s.cardTitle}>This Week</Text>
-                <View style={s.chartLegend}>
-                  <View style={s.legendDot}>
-                    <View style={[s.legendColor, { backgroundColor: '#F59E0B' }]} />
-                    <Text style={s.legendText}>Steps</Text>
-                  </View>
-                  <View style={s.legendDot}>
-                    <View style={[s.legendColor, { backgroundColor: '#EF4444' }]} />
-                    <Text style={s.legendText}>Workout</Text>
-                  </View>
+        <Animated.View style={[entranceStyle(cal2), s.section]}>
+          <View style={s.card}>
+            <View style={s.cardHeader}>
+              <Text style={s.cardTitle}>This Week</Text>
+              <View style={s.chartLegend}>
+                <View style={s.legendDot}>
+                  <View style={[s.legendColor, { backgroundColor: '#F59E0B' }]} />
+                  <Text style={s.legendText}>Steps</Text>
+                </View>
+                <View style={s.legendDot}>
+                  <View style={[s.legendColor, { backgroundColor: '#EF4444' }]} />
+                  <Text style={s.legendText}>Workout</Text>
                 </View>
               </View>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'flex-end',
-                  gap: 6,
-                  height: CHART_H + 36,
-                }}
-              >
-                {weeklyData.map((d, i) => {
-                  const totalH = Math.max((d.total / maxCal) * CHART_H, d.total > 0 ? 8 : 3);
-                  const stepsH = d.total > 0 ? (d.stepsCalories / d.total) * totalH : 0;
-                  const workoutH = totalH - stepsH;
-                  const isToday = i === weeklyData.length - 1;
-                  const dayIdx = new Date(d.date + 'T12:00:00').getDay();
-                  return (
-                    <View
-                      key={d.date}
-                      style={{
-                        flex: 1,
-                        alignItems: 'center',
-                        justifyContent: 'flex-end',
-                        height: CHART_H + 36,
-                      }}
-                    >
-                      {d.total > 0 && (
-                        <Text style={[s.barLabel, isToday && { color: '#F59E0B' }]}>
-                          {formatCal(d.total)}
-                        </Text>
-                      )}
-                      <View style={{ width: '100%', height: CHART_H, justifyContent: 'flex-end' }}>
-                        {d.total > 0 ? (
-                          <Svg
+            </View>
+            <View
+              style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: CHART_H + 36 }}
+            >
+              {weeklyData.map((d, i) => {
+                const totalH = Math.max((d.total / maxCal) * CHART_H, d.total > 0 ? 8 : 3);
+                const stepsH = d.total > 0 ? (d.stepsCalories / d.total) * totalH : 0;
+                const workoutH = totalH - stepsH;
+                const isToday = i === weeklyData.length - 1;
+                const dayIdx = new Date(d.date + 'T12:00:00').getDay();
+                return (
+                  <View
+                    key={d.date}
+                    style={{
+                      flex: 1,
+                      alignItems: 'center',
+                      justifyContent: 'flex-end',
+                      height: CHART_H + 36,
+                    }}
+                  >
+                    {d.total > 0 && (
+                      <Text style={[s.barLabel, isToday && { color: '#F59E0B' }]}>
+                        {formatCal(d.total)}
+                      </Text>
+                    )}
+                    <View style={{ width: '100%', height: CHART_H, justifyContent: 'flex-end' }}>
+                      {d.total > 0 ? (
+                        <Svg
+                          width="100%"
+                          height={totalH}
+                          style={{ position: 'absolute', bottom: 0 }}
+                        >
+                          <Defs>
+                            <SvgGrad id="stepsBar" x1="0" y1="1" x2="0" y2="0">
+                              <Stop offset="0" stopColor="#FCD34D" />
+                              <Stop offset="1" stopColor="#F59E0B" />
+                            </SvgGrad>
+                            <SvgGrad id="workoutBar" x1="0" y1="1" x2="0" y2="0">
+                              <Stop offset="0" stopColor="#FCA5A5" />
+                              <Stop offset="1" stopColor="#EF4444" />
+                            </SvgGrad>
+                          </Defs>
+                          <Rect
+                            x="0"
+                            y={workoutH}
                             width="100%"
-                            height={totalH}
-                            style={{ position: 'absolute', bottom: 0 }}
-                          >
-                            <Defs>
-                              <SvgGrad id="stepsBar" x1="0" y1="1" x2="0" y2="0">
-                                <Stop offset="0" stopColor="#FCD34D" />
-                                <Stop offset="1" stopColor="#F59E0B" />
-                              </SvgGrad>
-                              <SvgGrad id="workoutBar" x1="0" y1="1" x2="0" y2="0">
-                                <Stop offset="0" stopColor="#FCA5A5" />
-                                <Stop offset="1" stopColor="#EF4444" />
-                              </SvgGrad>
-                            </Defs>
+                            height={stepsH}
+                            fill="url(#stepsBar)"
+                            rx={5}
+                          />
+                          {workoutH > 0 && (
                             <Rect
                               x="0"
-                              y={workoutH}
+                              y={0}
                               width="100%"
-                              height={stepsH}
-                              fill="url(#stepsBar)"
+                              height={workoutH}
+                              fill="url(#workoutBar)"
                               rx={5}
                             />
-                            {workoutH > 0 && (
-                              <Rect
-                                x="0"
-                                y={0}
-                                width="100%"
-                                height={workoutH}
-                                fill="url(#workoutBar)"
-                                rx={5}
-                              />
-                            )}
-                          </Svg>
-                        ) : (
-                          <View style={s.barEmpty} />
-                        )}
-                      </View>
-                      <Text style={[s.barDay, isToday && { color: '#F59E0B', fontWeight: '700' }]}>
-                        {DAYS[dayIdx].slice(0, 2)}
-                      </Text>
-                      <Text style={[s.barDate, isToday && { color: '#F59E0B' }]}>
-                        {new Date(d.date + 'T12:00:00').getDate()}
-                      </Text>
+                          )}
+                        </Svg>
+                      ) : (
+                        <View style={s.barEmpty} />
+                      )}
                     </View>
-                  );
-                })}
-              </View>
+                    <Text style={[s.barDay, isToday && { color: '#F59E0B', fontWeight: '700' }]}>
+                      {DAYS[dayIdx].slice(0, 2)}
+                    </Text>
+                    <Text style={[s.barDate, isToday && { color: '#F59E0B' }]}>
+                      {new Date(d.date + 'T12:00:00').getDate()}
+                    </Text>
+                  </View>
+                );
+              })}
             </View>
           </View>
         </Animated.View>
 
         {/* ── How it works ── */}
-        <Animated.View style={entranceStyle(cal3)}>
-          <View style={s.section}>
-            <View style={s.card}>
-              <Text style={s.cardTitle}>How calories are calculated</Text>
-              <View style={{ marginTop: 14, gap: 14 }}>
-                {[
-                  {
-                    icon: '👟',
-                    title: 'Steps (walking)',
-                    desc: 'Uses your step count with the standard MET 3.5 walking formula: (steps ÷ 1000) × 0.57 × weight kg',
-                  },
-                  {
-                    icon: '🏋️',
-                    title: 'Workouts',
-                    desc: 'Uses MET values per activity type × your weight × duration. E.g. HIIT = 8.5 MET, Yoga = 3.0 MET.',
-                  },
-                  {
-                    icon: '📊',
-                    title: 'Accuracy',
-                    desc: 'Results are ~85% accurate — same method used by Apple Health and Fitbit. For exact figures a heart rate monitor is needed.',
-                  },
-                ].map((item) => (
-                  <View key={item.title} style={s.howRow}>
-                    <View style={s.howIcon}>
-                      <Text style={{ fontSize: 18 }}>{item.icon}</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.howTitle}>{item.title}</Text>
-                      <Text style={s.howDesc}>{item.desc}</Text>
-                    </View>
+        <Animated.View style={[entranceStyle(cal3), s.section]}>
+          <View style={s.card}>
+            <Text style={s.cardTitle}>How calories are calculated</Text>
+            <View style={{ marginTop: 14, gap: 14 }}>
+              {[
+                {
+                  icon: '👟',
+                  title: 'Steps (walking)',
+                  desc: 'Uses your step count with the standard MET 3.5 walking formula: (steps ÷ 1000) × 0.57 × weight kg',
+                },
+                {
+                  icon: '🏋️',
+                  title: 'Workouts',
+                  desc: 'Uses MET values per activity type × your weight × duration. E.g. HIIT = 8.5 MET, Yoga = 3.0 MET.',
+                },
+                {
+                  icon: '📊',
+                  title: 'Accuracy',
+                  desc: 'Results are ~85% accurate — same method used by Apple Health and Fitbit. For exact figures a heart rate monitor is needed.',
+                },
+              ].map((item) => (
+                <View key={item.title} style={s.howRow}>
+                  <View style={s.howIcon}>
+                    <Text style={{ fontSize: 18 }}>{item.icon}</Text>
                   </View>
-                ))}
-              </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.howTitle}>{item.title}</Text>
+                    <Text style={s.howDesc}>{item.desc}</Text>
+                  </View>
+                </View>
+              ))}
             </View>
           </View>
         </Animated.View>
@@ -514,59 +529,85 @@ const CaloriesScreen: React.FC = () => {
   );
 };
 
+const HERO_H = 280;
+
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg },
 
-  // Header
-  header: {
-    backgroundColor: COLORS.bg,
+  // ── Fixed Hero ──────────────────────────────────────────────────────────
+  heroWrap: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, height: HERO_H },
+  heroGrad: {
+    height: HERO_H,
     paddingTop: 56,
-    paddingHorizontal: 24,
-    paddingBottom: 28,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
-    borderBottomWidth: 1,
-    borderBottomColor: '#FDE68A',
-  },
-  titleRow: {
-    flexDirection: 'row',
+    overflow: 'hidden',
+    flexDirection: 'column',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
   },
-  titleLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  titleIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: '#FEF3C7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-  },
-  titleText: { fontSize: 20, fontWeight: '800', color: COLORS.text, letterSpacing: -0.3 },
-  profileBtn: {
+  deco: { position: 'absolute', borderRadius: 999, backgroundColor: '#fff' },
+  heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  heroTitleWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  heroTitle: { fontSize: 17, fontWeight: '900', color: '#fff', letterSpacing: -0.4 },
+  heroProfileBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#FFFBEB',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     borderRadius: RADIUS.full,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  heroProfileTxt: { fontSize: 12, fontWeight: '700', color: '#fff' },
+  heroContent: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1, paddingTop: 8 },
+  heroRingWrap: { alignItems: 'center', justifyContent: 'center' },
+  heroChips: { flex: 1, gap: 7 },
+  heroChip: {
+    backgroundColor: 'rgba(255,255,255,0.13)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: 'rgba(255,255,255,0.2)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  profileBtnValue: { color: '#D97706', fontSize: 11, fontWeight: '800', lineHeight: 14 },
-  profileBtnSub: {
-    color: COLORS.textMuted,
-    fontSize: 10,
-    lineHeight: 13,
-    textTransform: 'capitalize',
+  heroChipLabel: {
+    fontSize: 9,
+    color: 'rgba(255,220,100,0.85)',
+    fontWeight: '700',
+    letterSpacing: 0.6,
   },
-  profileBtnEmpty: { color: '#F59E0B', fontSize: 12, fontWeight: '700' },
+  heroChipVal: { fontSize: 14, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
+  heroChipUnit: { fontSize: 9, color: 'rgba(255,220,100,0.7)', fontWeight: '600' },
 
-  // Ring center overlay
+  // Hero empty
+  heroEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
+  heroEmptyIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroEmptyTxt: { color: 'rgba(255,255,255,0.85)', fontSize: 13, textAlign: 'center' },
+  heroEmptyBtn: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  heroEmptyBtnTxt: { color: '#fff', fontSize: 13, fontWeight: '700' },
+
+  // Ring center (inside hero — white text)
   ringCenter: {
     position: 'absolute',
     top: 0,
@@ -576,37 +617,19 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  ringValue: { fontSize: 42, fontWeight: '900', color: COLORS.text, letterSpacing: -2 },
-  ringUnit: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
+  ringValue: { fontSize: 28, fontWeight: '900', color: '#fff', letterSpacing: -1 },
+  ringUnit: { fontSize: 9, color: 'rgba(255,220,100,0.85)', marginTop: 1 },
   ringPctBadge: {
-    marginTop: 6,
-    backgroundColor: '#FEF3C7',
+    marginTop: 4,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: RADIUS.full,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
-  ringPctText: { fontSize: 12, color: '#D97706', fontWeight: '700' },
+  ringPctText: { fontSize: 11, color: '#fff', fontWeight: '700' },
 
-  // Empty state
-  emptyRing: { height: 210, alignItems: 'center', justifyContent: 'center', gap: 14 },
-  emptyRingIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#FEF3C7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#FDE68A',
-  },
-  emptyRingText: { color: COLORS.textSub, fontSize: 14, textAlign: 'center', lineHeight: 21 },
-  emptyRingBtn: { borderRadius: RADIUS.full, paddingHorizontal: 24, paddingVertical: 10 },
-  emptyRingBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
-
-  // Breakdown
-  breakdownRow: { flexDirection: 'row', gap: 12, marginTop: 12 },
+  // Breakdown chips
+  breakdownRow: { flexDirection: 'row', gap: 12 },
   breakdownChip: { flex: 1, borderRadius: RADIUS.lg, overflow: 'hidden' },
   breakdownChipGrad: {
     flexDirection: 'row',

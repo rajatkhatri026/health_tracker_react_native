@@ -11,14 +11,14 @@ export const COLORS = {
   borderLight: '#EEF0F8',
 
   // Brand gradients
-  gradPrimary: ['#7C3AED', '#06B6D4'] as const,
+  gradPrimary: ['#0891B2', '#06B6D4'] as const,
   gradSecondary: ['#F59E0B', '#EF4444'] as const,
   gradGreen: ['#10B981', '#34D399'] as const,
   gradPink: ['#EC4899', '#F43F5E'] as const,
   gradBlue: ['#3B82F6', '#06B6D4'] as const,
 
   // Solids
-  primary: '#7C3AED',
+  primary: '#0891B2',
   cyan: '#06B6D4',
   amber: '#F59E0B',
   green: '#10B981',
@@ -32,7 +32,7 @@ export const COLORS = {
   textMuted: '#9CA3AF',
 
   // Tinted backgrounds (light tints for cards/badges)
-  tintPurple: '#EDE9FE',
+  tintPurple: '#E0F7FA',
   tintCyan: '#ECFEFF',
   tintGreen: '#D1FAE5',
   tintAmber: '#FEF3C7',
@@ -41,7 +41,7 @@ export const COLORS = {
   tintRed: '#FEE2E2',
 
   // Glow shadows
-  glowPurple: '#7C3AED',
+  glowPurple: '#0891B2',
   glowCyan: '#06B6D4',
   glowGreen: '#10B981',
   glowAmber: '#F59E0B',
@@ -61,7 +61,7 @@ export const glassStyle = {
   borderWidth: 1,
   borderColor: COLORS.border,
   borderRadius: RADIUS.lg,
-  shadowColor: '#7C3AED',
+  shadowColor: '#0891B2',
   shadowOffset: { width: 0, height: 4 },
   shadowOpacity: 0.07,
   shadowRadius: 16,
